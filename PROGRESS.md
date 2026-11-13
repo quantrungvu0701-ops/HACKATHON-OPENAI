@@ -44,3 +44,12 @@ Emulator notes:
   Chrome on dichvucong.gov.vn; `adb shell input swipe` drags it and it snaps to the nearest
   edge; position is remembered. Home shows the accessibility check, the restricted-settings
   steps and "Bắt đầu". Known broken: nothing. Next: M2 ScreenReader.
+- **M2 (2026-11-14) PASS on emulator, with one caveat.** `ScreenReader` turns the focused app
+  window into the MECHANISM §2.1 node list (roles, text/desc/hint, view id, bounds, Chrome
+  host from the URL bar; password text removed, digit runs of 6+ masked, our own windows
+  skipped, cap 150). Bubble tap logs it under tag `ChiDay`. Verified in Chrome on
+  chinhphu.vn (20 clean nodes, Vietnamese labels). **Caveat:** dichvucong.gov.vn did not
+  load tonight: TCP 443 to 14.238.3.76 times out from this PC's network as well as from the
+  emulator, so the reader was only checked there against Chrome's error page (host was
+  detected correctly). Re-check the portal on the phone / venue network (PHONE_CHECKLIST
+  item 10). Next: M3 Settings + LlmClient.

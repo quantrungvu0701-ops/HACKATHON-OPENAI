@@ -6,7 +6,10 @@ import android.content.Context
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import kotlinx.serialization.json.Json
 import vn.chiday.app.overlay.BubbleWindow
+import vn.chiday.app.screen.ScreenReader
+import vn.chiday.app.screen.UiNode
 
 /**
  * The core of the app. One accessibility permission gives us the overlay windows and the
@@ -24,7 +27,17 @@ class GuideService : AccessibilityService() {
     }
 
     private fun onBubbleTap() {
-        Log.i(TAG, "bubble tapped")
+        val snap = ScreenReader.read(this)
+        if (snap == null) {
+            Log.w(TAG, "bubble tapped: no readable app window")
+            return
+        }
+        Log.i(TAG, "screen package=${snap.pkg} host=${snap.host} nodes=${snap.nodes.size} hash=${snap.hash}")
+        if (BuildConfig.DEBUG) {
+            // One node per line: logcat truncates long lines.
+            val json = Json { explicitNulls = false }
+            snap.nodes.forEach { Log.d(TAG, "node " + json.encodeToString(UiNode.serializer(), it)) }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
