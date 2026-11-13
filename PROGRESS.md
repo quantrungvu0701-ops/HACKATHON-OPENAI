@@ -85,3 +85,40 @@ Emulator notes:
   "Giọng đọc tiếng Việt" links to voice-data install. Home now shows three checks. Speech was
   verified from logs and the audio system, not by ear: listen on the phone (checklist item 7).
   Next: M6.
+- **M6 (2026-11-14) PASS on emulator.** `bash tools/kill_reopen_test.sh 5`: 5/5 rounds of
+  swipe away from recents, reopen, open Chrome, tap bubble gave ring + speech with no
+  re-setup; Home showed three green checks each time. Also checked:
+  (a) `kill -9` of the app process: Android rebound the service under a new pid, bubble came
+  back, saved key still worked; (b) **Force stop**: Android clears the accessibility setting
+  (`enabled_accessibility_services` became `null`), Home shows a red "Quyền trợ năng" row and
+  one "Mở Cài đặt trợ năng" button (which opens the accessibility settings page); after
+  switching the service back on the key and voice checks were still green and guiding worked.
+  **Emulator caveat:** on AOSP the recents swipe removes the task but the process survives
+  because the accessibility service is bound, so round 1 to 5 did not exercise a process
+  death; (a) did. OEM skins (Xiaomi, Oppo, Vivo) often kill the process and sometimes the
+  service on swipe, which is what PHONE_CHECKLIST items 6 and 9 are for.
+
+## State after milestones 1 to 6
+
+Works on the emulator: bubble, screen reading, settings + both model clients, ring + card,
+Vietnamese speech, kill-and-reopen. CI builds the debug APK on every push to `main`.
+
+Not yet proven, in order of risk for the demo:
+1. **No real model has been called.** Everything after M2 ran against
+   `tools/stub/stub_server.py`. With the host's key: run "Kiểm tra kết nối", then check that
+   the model picks sensible targets and answers within about 3 seconds. `AnthropicClient`
+   sends `anthropic-version: 2026-10-21` and no sampling parameters; `OpenAiCompatClient`
+   sends only `model` and `messages`.
+2. **Nothing has run on a real phone.** Run PHONE_CHECKLIST.md top to bottom first.
+3. **dichvucong.gov.vn was unreachable** from this network tonight (see M2).
+4. Screenshot fallback for apps with an empty accessibility tree is not built (the manifest
+   already declares `canTakeScreenshot`). A nearly empty tree currently gives "Tôi chưa chắc".
+
+Next milestones: M7 follow mode (replace "clear the ring" in `GuideService.recheckTarget`
+with "analyse again"; the 800 ms settle and one-request-in-flight pieces are already there),
+M8 playbooks (`GuideEngine.userMessage` sends `PLAYBOOK: none` today), M9 DocCheck (both
+clients already accept `imageJpeg`).
+
+Dev stub: `python tools/stub/stub_server.py`, then in the app set provider "OpenAI / tương
+thích", base URL `http://10.0.2.2:8787/v1`, any model name, any key. Choose what it points
+at with `curl "http://localhost:8787/pick?q=<regex>"`.
