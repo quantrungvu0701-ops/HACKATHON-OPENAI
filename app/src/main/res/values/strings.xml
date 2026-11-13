@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Chỉ Đây</string>
+
+    <!-- Accessibility service -->
+    <string name="service_label">Chỉ Đây</string>
+    <string name="service_summary">Khoanh tròn nút cần bấm và đọc hướng dẫn bằng tiếng Việt.</string>
+    <string name="service_description">Chỉ Đây đọc nội dung màn hình khi bác bấm vào nút tròn màu cam, rồi khoanh tròn nút cần bấm và nói cho bác biết phải làm gì. Chỉ Đây không bao giờ bấm, gõ hay gửi thay bác.</string>
+    <string name="bubble_description">Nút Chỉ Đây. Bấm để được chỉ dẫn.</string>
+
+    <!-- Home -->
+    <string name="home_tagline">Bấm nút cam khi bác không biết bấm vào đâu.</string>
+    <string name="home_checklist_title">Kiểm tra trước khi dùng</string>
+    <string name="check_service_title">Quyền trợ năng</string>
+    <string name="check_service_ok">Đã bật. Nút cam đang nổi trên màn hình.</string>
+    <string name="check_service_starting">Đã bật trong Cài đặt nhưng chưa chạy. Bấm để mở Cài đặt, tắt rồi bật lại.</string>
+    <string name="check_service_off">Chưa bật. Bấm để mở Cài đặt trợ năng.</string>
+    <string name="home_open_accessibility">Mở Cài đặt trợ năng</string>
+    <string name="home_start">Bắt đầu</string>
+    <string name="home_start_hint">Mở ứng dụng bác cần làm, rồi bấm nút cam.</string>
+    <string name="home_not_ready">Bác cần bật quyền trợ năng trước.</string>
+    <string name="restricted_title">Nếu công tắc bị mờ, không bật được</string>
+    <string name="restricted_step_1">1. Bấm «Mở thông tin ứng dụng» bên dưới.</string>
+    <string name="restricted_step_2">2. Bấm dấu ⋮ ở góc trên bên phải.</string>
+    <string name="restricted_step_3">3. Chọn «Cho phép cài đặt bị hạn chế».</string>
+    <string name="restricted_step_4">4. Quay lại đây, bấm «Mở Cài đặt trợ năng» và bật Chỉ Đây.</string>
+    <string name="home_open_app_info">Mở thông tin ứng dụng</string>
+</resources>
