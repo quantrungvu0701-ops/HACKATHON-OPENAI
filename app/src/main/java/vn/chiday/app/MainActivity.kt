@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.speech.tts.TextToSpeech
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -37,6 +38,7 @@ class MainActivity : ComponentActivity() {
                         onOpenAccessibility = ::openAccessibilitySettings,
                         onOpenAppInfo = ::openAppInfo,
                         onOpenSettings = { screen = SCREEN_SETTINGS },
+                        onOpenVoiceSettings = ::openVoiceSettings,
                         onStart = { moveTaskToBack(true) },
                     )
                 }
@@ -51,6 +53,19 @@ class MainActivity : ComponentActivity() {
 
     private fun openAccessibilitySettings() {
         startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    /** Voice-data install screen of the TTS engine, falling back to the system TTS settings. */
+    private fun openVoiceSettings() {
+        val candidates = listOf(
+            Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA),
+            Intent("com.android.settings.TTS_SETTINGS"),
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS),
+        )
+        for (intent in candidates) {
+            val ok = runCatching { startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+            if (ok) return
+        }
     }
 
     private fun openAppInfo() {

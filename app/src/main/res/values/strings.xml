@@ -32,6 +32,10 @@
     <string name="home_open_settings">Cài đặt kết nối AI</string>
     <string name="home_not_ready_ai">Bác cần nhập khóa AI trong Cài đặt trước.</string>
 
+    <string name="check_voice_title">Giọng đọc tiếng Việt</string>
+    <string name="check_voice_ok">Đã có. Chỉ Đây sẽ đọc hướng dẫn thành tiếng.</string>
+    <string name="check_voice_checking">Đang kiểm tra giọng đọc…</string>
+    <string name="check_voice_missing">Chưa có giọng tiếng Việt. Chỉ Đây vẫn hiện chữ. Bấm để cài giọng đọc.</string>
     <string name="home_goal_label">Bác muốn làm việc gì?</string>
     <string name="home_goal_hint">Ví dụ: tra cứu hồ sơ, nộp tiền điện</string>
 

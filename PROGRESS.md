@@ -76,3 +76,12 @@ Emulator notes:
   Testing note: `adb shell uiautomator dump` suspends accessibility services while it runs,
   so do not use it during a guide session; use screenshots and `adb logcat -s ChiDay`.
   Next: M5.
+- **M5 (2026-11-14) PASS on emulator.** `Speaker` uses the phone's TextToSpeech with
+  `Locale("vi","VN")` at rate 0.92; the instruction is spoken (Google TTS dispatched voice
+  `vi-vn-x-vic-seanet-embedded`, `speech started`/`speech done` in the log, speech
+  AudioTrack active) and shown on the card with "Bước n/m". `caution=true` turns ring and
+  card amber and adds "Bác kiểm tra kỹ thông tin trước khi bấm." to card and speech. If the
+  Vietnamese voice is missing nothing is spoken, the card still shows, and Home's third check
+  "Giọng đọc tiếng Việt" links to voice-data install. Home now shows three checks. Speech was
+  verified from logs and the audio system, not by ear: listen on the phone (checklist item 7).
+  Next: M6.

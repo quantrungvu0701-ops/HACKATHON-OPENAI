@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import vn.chiday.app.guide.GuideEngine
 import vn.chiday.app.guide.GuideResult
+import vn.chiday.app.guide.Speaker
 import vn.chiday.app.overlay.BubbleWindow
 import vn.chiday.app.overlay.HighlightWindow
 import vn.chiday.app.screen.ScreenReader
@@ -38,6 +39,7 @@ class GuideService : AccessibilityService() {
     private lateinit var engine: GuideEngine
     private var bubble: BubbleWindow? = null
     private var highlight: HighlightWindow? = null
+    private var speaker: Speaker? = null
 
     /** The model call in flight. One at a time; a new tap cancels the old one. */
     private var analysis: Job? = null
@@ -53,6 +55,7 @@ class GuideService : AccessibilityService() {
         settings = SettingsStore(this)
         engine = GuideEngine(settings)
         highlight = HighlightWindow(this)
+        speaker = Speaker(this)
         bubble = BubbleWindow(this, ::onBubbleTap).also { it.show() }
         _running.value = true
         Log.i(TAG, "service connected, bubble shown")
@@ -119,6 +122,9 @@ class GuideService : AccessibilityService() {
         highlight?.showTarget(result.rect, title, body, footer, reply.caution)
         bubble?.bringToFront()
         bubble?.state = BubbleWindow.State.ACTIVE
+        // Spoken text: the full sentence, plus the warning before payment / submit / delete.
+        val spoken = listOfNotNull(say.ifEmpty { title }, getString(R.string.guide_caution).takeIf { reply.caution }).joinToString(" ")
+        speaker?.speak(spoken)
         Log.i(TAG, "ring on node ${result.targetIndex} at ${result.rect.toShortString()} caution=${reply.caution}")
     }
 
@@ -127,6 +133,7 @@ class GuideService : AccessibilityService() {
         highlight?.showMessage(title, body)
         bubble?.bringToFront()
         bubble?.state = BubbleWindow.State.IDLE
+        speaker?.speak(listOfNotNull(title, body).joinToString(". "))
         Log.i(TAG, "message: $title")
         messageTimeout?.cancel()
         messageTimeout = scope.launch {
@@ -140,6 +147,7 @@ class GuideService : AccessibilityService() {
         settle?.cancel()
         messageTimeout?.cancel()
         shown = null
+        speaker?.stop()
         highlight?.hide()
         bubble?.state = BubbleWindow.State.IDLE
     }
@@ -210,6 +218,8 @@ class GuideService : AccessibilityService() {
         shown = null
         highlight?.hide()
         highlight = null
+        speaker?.shutdown()
+        speaker = null
         bubble?.hide()
         bubble = null
         if (instance === this) {

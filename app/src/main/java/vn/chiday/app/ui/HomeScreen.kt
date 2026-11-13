@@ -24,7 +24,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.OutlinedTextField
+import android.speech.tts.TextToSpeech
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import vn.chiday.app.GuideService
 import vn.chiday.app.R
+import vn.chiday.app.guide.Speaker
 import vn.chiday.app.settings.SettingsStore
 
 enum class CheckState { OK, WARN, MISSING }
@@ -58,6 +61,7 @@ fun HomeScreen(
     onOpenAccessibility: () -> Unit,
     onOpenAppInfo: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenVoiceSettings: () -> Unit,
     onStart: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -121,6 +125,20 @@ fun HomeScreen(
             onClick = onOpenSettings,
         )
 
+        val voiceState = rememberVietnameseVoiceState(resumeTick)
+        CheckRow(
+            state = voiceState ?: CheckState.WARN,
+            title = stringResource(R.string.check_voice_title),
+            detail = stringResource(
+                when (voiceState) {
+                    CheckState.OK -> R.string.check_voice_ok
+                    null, CheckState.WARN -> R.string.check_voice_checking
+                    CheckState.MISSING -> R.string.check_voice_missing
+                },
+            ),
+            onClick = if (voiceState == CheckState.MISSING) onOpenVoiceSettings else null,
+        )
+
         if (serviceState != CheckState.OK) {
             Button(
                 onClick = onOpenAccessibility,
@@ -162,6 +180,29 @@ fun HomeScreen(
             shape = RoundedCornerShape(16.dp),
         ) { Text(stringResource(R.string.home_open_settings)) }
     }
+}
+
+/**
+ * Asks the default text-to-speech engine whether it can speak Vietnamese. Null while the
+ * engine is still binding. Re-checked on every resume, e.g. after installing voice data.
+ */
+@Composable
+private fun rememberVietnameseVoiceState(resumeTick: Int): CheckState? {
+    val context = LocalContext.current
+    var state by remember { mutableStateOf<CheckState?>(null) }
+    DisposableEffect(resumeTick) {
+        var tts: TextToSpeech? = null
+        tts = TextToSpeech(context.applicationContext) { status ->
+            val engine = tts
+            state = if (status == TextToSpeech.SUCCESS && engine != null && Speaker.isVietnameseAvailable(engine)) {
+                CheckState.OK
+            } else {
+                CheckState.MISSING
+            }
+        }
+        onDispose { runCatching { tts.shutdown() } }
+    }
+    return state
 }
 
 /** The user's goal in their own words. Saved as they type so it survives kill-and-reopen. */
