@@ -11,6 +11,8 @@ captures/
 *.aab
 *.keystore
 *.jks
+# The shared DEBUG keystore is committed on purpose (see README, Team workflow).
+!keystore/debug.keystore
 .DS_Store
 # dev-only artefacts
 tools/stub/*.log

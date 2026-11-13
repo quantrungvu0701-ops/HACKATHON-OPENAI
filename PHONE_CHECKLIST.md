@@ -63,7 +63,7 @@ Passes when the phone's serial is listed with state `device` (not `unauthorized`
 ## 4. Install the APK
 
 Get `app-debug.apk` from the latest green run of the **Android** workflow on GitHub
-(artifact `chiday-debug-apk`), or build it: `.\gradlew assembleDebug`.
+(artifact `chiday-debug-apk-<commit>`), or build it: `.\gradlew assembleDebug`.
 
 ```
 adb install -r app\build\outputs\apk\debug\app-debug.apk

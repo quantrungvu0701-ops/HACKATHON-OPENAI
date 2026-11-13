@@ -203,3 +203,12 @@ each one on the demo phone the night before.
 - UI strings in Vietnamese in `strings.xml`; code and comments in English.
 - If a build or install fails twice the same way, stop and write the error to
   `PROGRESS.md` instead of trying variants.
+- **Several people and agents push to `main` from different machines.** Run
+  `git pull --rebase origin main` before starting and before every push; never force-push
+  `main`. Keep commits small. `PROGRESS.md` is append-only and union-merged: add lines,
+  do not rewrite existing ones. See `README.md` → "Team workflow".
+- Debug builds are signed with the committed `keystore/debug.keystore` on every machine
+  and in CI. Do not replace it or switch back to the per-machine debug key: that breaks
+  `adb install -r` between teammates and wipes the key saved on the demo phone.
+- Machine-specific paths belong in `local.properties` or environment variables, never in
+  committed files.

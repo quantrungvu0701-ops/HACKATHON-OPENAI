@@ -5,6 +5,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+// Short commit id baked into the APK so the team can see which build is on a device.
+val gitSha: String = runCatching {
+    providers.exec { commandLine("git", "rev-parse", "--short", "HEAD") }.standardOutput.asText.get().trim()
+}.getOrDefault("").ifEmpty { "dev" }
+
 android {
     namespace = "vn.chiday.app"
     compileSdk = 34
@@ -15,9 +20,25 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
+        buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
+    }
+
+    signingConfigs {
+        // One debug key for every laptop and for CI. Without it each machine signs with its
+        // own key, `adb install -r` fails with INSTALL_FAILED_UPDATE_INCOMPATIBLE, and the
+        // uninstall that fixes it wipes the API key saved on the demo phone.
+        getByName("debug") {
+            storeFile = rootProject.file("keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
         }

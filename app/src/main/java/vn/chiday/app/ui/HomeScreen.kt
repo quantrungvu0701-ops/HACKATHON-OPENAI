@@ -47,6 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import vn.chiday.app.BuildConfig
 import vn.chiday.app.GuideService
 import vn.chiday.app.R
 import vn.chiday.app.guide.Speaker
@@ -179,6 +180,12 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
             shape = RoundedCornerShape(16.dp),
         ) { Text(stringResource(R.string.home_open_settings)) }
+
+        Text(
+            stringResource(R.string.home_build, BuildConfig.GIT_SHA),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

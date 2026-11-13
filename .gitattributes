@@ -1,4 +1,7 @@
 * text=auto eol=lf
+# Everyone appends to PROGRESS.md; keep both sides instead of raising a conflict.
+PROGRESS.md merge=union
+*.keystore binary
 *.bat text eol=crlf
 *.jar binary
 *.png binary
