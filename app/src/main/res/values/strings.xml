@@ -25,4 +25,31 @@
     <string name="restricted_step_3">3. Chọn «Cho phép cài đặt bị hạn chế».</string>
     <string name="restricted_step_4">4. Quay lại đây, bấm «Mở Cài đặt trợ năng» và bật Chỉ Đây.</string>
     <string name="home_open_app_info">Mở thông tin ứng dụng</string>
+    <string name="check_ai_title">Kết nối AI</string>
+    <string name="check_ai_ok">Đã có khóa và đã kiểm tra kết nối.</string>
+    <string name="check_ai_untested">Đã có khóa nhưng chưa kiểm tra. Bấm để kiểm tra kết nối.</string>
+    <string name="check_ai_missing">Chưa nhập khóa. Bấm để mở Cài đặt.</string>
+    <string name="home_open_settings">Cài đặt kết nối AI</string>
+    <string name="home_not_ready_ai">Bác cần nhập khóa AI trong Cài đặt trước.</string>
+
+    <!-- Settings -->
+    <string name="settings_back">‹ Quay lại</string>
+    <string name="settings_title">Cài đặt kết nối AI</string>
+    <string name="settings_intro">Nhập thông tin do ban tổ chức cung cấp, rồi bấm «Kiểm tra kết nối».</string>
+    <string name="settings_provider">Nhà cung cấp</string>
+    <string name="provider_openai">OpenAI / tương thích</string>
+    <string name="provider_gemini">Gemini</string>
+    <string name="provider_anthropic">Anthropic</string>
+    <string name="settings_base_url">Địa chỉ máy chủ (base URL)</string>
+    <string name="settings_model">Tên model</string>
+    <string name="settings_model_hint">Tên model do ban tổ chức cung cấp</string>
+    <string name="settings_key">Khóa API</string>
+    <string name="settings_show">Hiện</string>
+    <string name="settings_hide">Ẩn</string>
+    <string name="settings_test">Kiểm tra kết nối</string>
+    <string name="settings_testing">Đang kiểm tra…</string>
+    <string name="settings_test_ok">Kết nối tốt (%1$d ms)</string>
+    <string name="settings_test_failed">Chưa kết nối được</string>
+    <string name="settings_save">Lưu và quay lại</string>
+    <string name="settings_privacy">Khóa chỉ được lưu trên điện thoại này và chỉ gửi tới địa chỉ máy chủ ở trên.</string>
 </resources>

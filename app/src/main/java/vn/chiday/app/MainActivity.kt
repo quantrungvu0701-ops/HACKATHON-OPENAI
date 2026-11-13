@@ -5,12 +5,16 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import vn.chiday.app.ui.ChiDayTheme
 import vn.chiday.app.ui.HomeScreen
+import vn.chiday.app.ui.SettingsScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -21,12 +25,21 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             ChiDayTheme {
-                HomeScreen(
-                    resumeTick = resumeTick,
-                    onOpenAccessibility = ::openAccessibilitySettings,
-                    onOpenAppInfo = ::openAppInfo,
-                    onStart = { moveTaskToBack(true) },
-                )
+                var screen by rememberSaveable { mutableStateOf(SCREEN_HOME) }
+                when (screen) {
+                    SCREEN_SETTINGS -> {
+                        BackHandler { screen = SCREEN_HOME }
+                        SettingsScreen(onBack = { screen = SCREEN_HOME })
+                    }
+
+                    else -> HomeScreen(
+                        resumeTick = resumeTick,
+                        onOpenAccessibility = ::openAccessibilitySettings,
+                        onOpenAppInfo = ::openAppInfo,
+                        onOpenSettings = { screen = SCREEN_SETTINGS },
+                        onStart = { moveTaskToBack(true) },
+                    )
+                }
             }
         }
     }
@@ -45,5 +58,10 @@ class MainActivity : ComponentActivity() {
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
+    }
+
+    private companion object {
+        const val SCREEN_HOME = "home"
+        const val SCREEN_SETTINGS = "settings"
     }
 }

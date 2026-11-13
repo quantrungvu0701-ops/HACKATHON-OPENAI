@@ -6,6 +6,8 @@ import android.content.Context
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.json.Json
 import vn.chiday.app.overlay.BubbleWindow
 import vn.chiday.app.screen.ScreenReader
@@ -22,6 +24,7 @@ class GuideService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
+        _running.value = true
         bubble = BubbleWindow(this, ::onBubbleTap).also { it.show() }
         Log.i(TAG, "service connected, bubble shown")
     }
@@ -59,7 +62,10 @@ class GuideService : AccessibilityService() {
     private fun teardown() {
         bubble?.hide()
         bubble = null
-        if (instance === this) instance = null
+        if (instance === this) {
+            instance = null
+            _running.value = false
+        }
     }
 
     companion object {
@@ -69,8 +75,13 @@ class GuideService : AccessibilityService() {
         var instance: GuideService? = null
             private set
 
-        /** True when the system has actually bound the service in this process. */
-        fun isRunning(): Boolean = instance != null
+        private val _running = MutableStateFlow(false)
+
+        /**
+         * True while the system has the service bound in this process. A flow, not a one-off
+         * read: after a kill-and-reopen the activity can be on screen before the system rebinds.
+         */
+        val running: StateFlow<Boolean> = _running
 
         /** True when the user has switched the service on in Settings. */
         fun isEnabledInSettings(context: Context): Boolean {

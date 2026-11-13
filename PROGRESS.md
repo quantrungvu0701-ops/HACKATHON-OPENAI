@@ -53,3 +53,13 @@ Emulator notes:
   emulator, so the reader was only checked there against Chrome's error page (host was
   detected correctly). Re-check the portal on the phone / venue network (PHONE_CHECKLIST
   item 10). Next: M3 Settings + LlmClient.
+- **M3 (2026-11-14) PASS on emulator against the dev stub.** Settings screen (provider,
+  base URL, model, key, "Kiểm tra kết nối") backed by DataStore; `OpenAiCompatClient`
+  (`{baseUrl}/chat/completions`, also used for Gemini's OpenAI endpoint) and `AnthropicClient`
+  (`{baseUrl}/v1/messages`). A key typed into the app returned text through both clients;
+  Home shows a green "Kết nối AI" check and updates live when the service binds.
+  **Not tested against a real provider:** no real key was available tonight, so the test
+  used `tools/stub/stub_server.py` (dev tool, not in the APK) at `http://10.0.2.2:8787`.
+  First thing with the host's key: PHONE_CHECKLIST item 8. Cleartext HTTP is allowed in
+  the manifest because the host's base URL is unknown and may be a plain-http gateway.
+  The emulator still holds the stub settings (key `test-key`). Next: M4.
