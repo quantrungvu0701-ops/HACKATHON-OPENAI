@@ -57,8 +57,12 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
     /** Once a playbook is picked it is kept for the session while it still fits the app. */
     private var sessionPlaybook: Playbook? = null
 
+    /** Number of the playbook step shown last, to tell apart steps that share a screen. */
+    private var lastStepN: Int? = null
+
     fun resetSession() {
         lastStep = null
+        lastStepN = null
         sessionPlaybook = null
     }
 
@@ -68,8 +72,9 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         if (snapshot.nodes.isEmpty()) return GuideResult.NotSure("empty node list")
 
         val playbook = sessionPlaybook?.takeIf { it.appliesTo(snapshot) } ?: playbooks.select(snapshot, goal)
+        if (playbook?.id != sessionPlaybook?.id) lastStepN = null
         sessionPlaybook = playbook
-        val likely = playbook?.likelyStep(snapshot)
+        val likely = playbook?.likelyStep(snapshot, lastStepN)
         Log.i(TAG, "playbook=${playbook?.id ?: "none"} likelyStep=${likely?.n ?: "-"}")
 
         val raw = try {
@@ -95,6 +100,7 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         return when (val result = validate(reply, snapshot)) {
             is GuideResult.Show -> {
                 lastStep = reply.subtitle ?: reply.say
+                if (playbook != null) lastStepN = reply.step ?: lastStepN
                 result.copy(verified = playbook?.verified != null)
             }
             else -> result

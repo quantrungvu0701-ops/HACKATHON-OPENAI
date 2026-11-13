@@ -1,0 +1,48 @@
+{
+  "id": "vnpost-theo-doi-buu-gui",
+  "service": "Bưu điện Việt Nam",
+  "match": {
+    "packages": [
+      "com.android.chrome"
+    ],
+    "hosts": [
+      "vnpost.vn"
+    ]
+  },
+  "goal": "Xem hàng gửi bưu điện đã đến đâu",
+  "verified": {
+    "by": "team, emulator (Chrome, Android 14); phone check pending",
+    "date": "2026-11-14"
+  },
+  "steps": [
+    {
+      "n": 1,
+      "signals": [
+        "Theo Dõi Bưu Gửi",
+        "Nhập mã bưu gửi"
+      ],
+      "do": "Bấm vào ô «Nhập mã bưu gửi» rồi gõ mã in trên biên lai gửi hàng",
+      "target_hint": "Nhập mã bưu gửi",
+      "pitfall": "Mã có 13 ký tự, bắt đầu và kết thúc bằng chữ cái, ví dụ EB123456789VN."
+    },
+    {
+      "n": 2,
+      "signals": [
+        "Theo Dõi Bưu Gửi",
+        "Mã xác nhận"
+      ],
+      "do": "Gõ các chữ và số trong hình bên phải vào ô «Mã xác nhận»",
+      "target_hint": "Mã xác nhận",
+      "pitfall": "Nếu hình khó đọc, bác bấm mũi tên tròn bên cạnh để đổi hình khác."
+    },
+    {
+      "n": 3,
+      "signals": [
+        "Theo Dõi Bưu Gửi",
+        "Mã xác nhận"
+      ],
+      "do": "Bấm nút «Theo dõi» màu xanh đậm",
+      "target_hint": "Theo dõi"
+    }
+  ]
+}

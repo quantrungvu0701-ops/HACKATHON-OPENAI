@@ -48,13 +48,23 @@ data class Playbook(
      * The step whose signals best match the visible text, or null if none match. This is the
      * cheap string-matching half of "identify"; the model breaks ties and has the final say.
      */
-    fun likelyStep(snapshot: ScreenSnapshot): Step? {
+    fun likelyStep(snapshot: ScreenSnapshot, lastStepN: Int? = null): Step? {
         val screenText = snapshot.nodes.joinToString("\n") { listOfNotNull(it.text, it.desc, it.hint).joinToString(" ") }.lowercase()
-        return steps
-            .map { step -> step to step.signals.count { it.isNotBlank() && screenText.contains(it.lowercase()) } }
-            .filter { it.second > 0 }
-            // Most signals matched; on a tie the later step, since earlier signals often stay on screen.
-            .maxWithOrNull(compareBy<Pair<Step, Int>> { it.second }.thenBy { it.first.n })
-            ?.first
+        val scored = steps.mapNotNull { step ->
+            val signals = step.signals.filter { it.isNotBlank() }
+            if (signals.isEmpty()) return@mapNotNull null
+            val hit = signals.count { screenText.contains(it.lowercase()) }
+            if (hit == 0) null else step to hit.toDouble() / signals.size
+        }
+        val best = scored.maxOfOrNull { it.second } ?: return null
+        val tied = scored.filter { it.second == best }.map { it.first }
+        // Several steps can share one screen (fill a field, then the next, then press the
+        // button). Session progress breaks the tie: the step after the last one shown, else
+        // the last one again, else the first.
+        if (lastStepN != null) {
+            tied.firstOrNull { it.n == lastStepN + 1 }?.let { return it }
+            tied.firstOrNull { it.n == lastStepN }?.let { return it }
+        }
+        return tied.minByOrNull { it.n }
     }
 }

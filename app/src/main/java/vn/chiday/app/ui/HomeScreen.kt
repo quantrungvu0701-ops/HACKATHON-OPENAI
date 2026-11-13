@@ -51,6 +51,7 @@ import vn.chiday.app.BuildConfig
 import vn.chiday.app.GuideService
 import vn.chiday.app.R
 import vn.chiday.app.guide.Speaker
+import vn.chiday.app.playbook.PlaybookStore
 import vn.chiday.app.settings.SettingsStore
 
 enum class CheckState { OK, WARN, MISSING }
@@ -233,6 +234,30 @@ private fun GoalField() {
         maxLines = 2,
         modifier = Modifier.fillMaxWidth().testTag("field_goal"),
     )
+
+    // Tasks that have a checked step-by-step guide: one tap fills the goal in.
+    val known = remember { PlaybookStore(context).all() }
+    if (known.isNotEmpty()) {
+        Text(
+            stringResource(R.string.home_goal_known),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        known.forEach { pb ->
+            val selected = goal?.trim().equals(pb.goal, ignoreCase = true)
+            val label = "${pb.goal} · ${pb.service}"
+            val mod = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("goal_${pb.id}")
+            if (selected) {
+                Button(onClick = { goal = "" }, modifier = mod, shape = RoundedCornerShape(14.dp)) {
+                    Text("✓ $label", style = MaterialTheme.typography.bodyMedium)
+                }
+            } else {
+                OutlinedButton(onClick = { goal = pb.goal }, modifier = mod, shape = RoundedCornerShape(14.dp)) {
+                    Text(label, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+    }
 }
 
 @Composable

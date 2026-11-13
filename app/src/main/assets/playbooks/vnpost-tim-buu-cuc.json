@@ -1,0 +1,58 @@
+{
+  "id": "vnpost-tim-buu-cuc",
+  "service": "Bưu điện Việt Nam",
+  "match": {
+    "packages": [
+      "com.android.chrome"
+    ],
+    "hosts": [
+      "vnpost.vn"
+    ]
+  },
+  "goal": "Tìm bưu cục gần nhà",
+  "verified": {
+    "by": "team, emulator (Chrome, Android 14); phone check pending",
+    "date": "2026-11-14"
+  },
+  "steps": [
+    {
+      "n": 1,
+      "signals": [
+        "Theo Dõi Bưu Gửi",
+        "Ước Tính Cước"
+      ],
+      "do": "Bấm vào «Tìm Bưu Cục», hình cái ghim bản đồ ở giữa màn hình",
+      "target_hint": "Tìm Bưu Cục",
+      "pitfall": "Đừng bấm vào ô «Nhập mã bưu gửi», ô đó để theo dõi hàng đã gửi."
+    },
+    {
+      "n": 2,
+      "signals": [
+        "Loại bưu cục",
+        "Phường/Xã"
+      ],
+      "do": "Bấm vào ô ngay dưới chữ «Tỉnh/Thành phố» rồi chọn tỉnh của bác",
+      "target_hint": "Tỉnh/Thành phố",
+      "pitfall": "Phải chọn tỉnh trước thì mới chọn được phường, xã."
+    },
+    {
+      "n": 3,
+      "signals": [
+        "Loại bưu cục",
+        "Phường/Xã"
+      ],
+      "do": "Bấm vào ô ngay dưới chữ «Phường/Xã» rồi chọn phường, xã của bác",
+      "target_hint": "Phường/Xã"
+    },
+    {
+      "n": 4,
+      "signals": [
+        "Loại bưu cục",
+        "Phường/Xã"
+      ],
+      "do": "Bấm nút «Tìm kiếm» màu xanh ở dưới",
+      "target_hint": "Tìm kiếm",
+      "pitfall": "Sau khi bấm, bác kéo màn hình lên để xem danh sách bưu cục."
+    }
+  ]
+}

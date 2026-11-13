@@ -65,6 +65,9 @@ class GuideService : AccessibilityService() {
     /** What was last spoken, so a re-analysis that gives the same instruction stays quiet. */
     private var lastSpoken: String? = null
 
+    /** Automatic analyses in a row that produced no ring; each one doubles the wait before the next. */
+    private var autoMisses = 0
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
@@ -110,10 +113,18 @@ class GuideService : AccessibilityService() {
             val started = SystemClock.elapsedRealtime()
             val result = engine.decide(snap)
             Log.i(TAG, "decision (auto=$auto) in ${SystemClock.elapsedRealtime() - started} ms: $result")
+            autoMisses = if (result is GuideResult.Show || !auto) 0 else autoMisses + 1
             when (result) {
                 is GuideResult.Show -> show(result, snap)
                 // In follow mode an unsure answer is shown quietly: the user did not ask just now.
-                is GuideResult.NotSure -> showMessage(getString(R.string.guide_not_sure), null, speak = !auto)
+                is GuideResult.NotSure -> if (auto && autoMisses == 1) {
+                    // First automatic miss is usually a page that is still loading: stay silent
+                    // and look again when it settles, instead of flashing a message.
+                    Log.i(TAG, "auto analysis unsure once: waiting for the screen to settle")
+                    bubble?.state = BubbleWindow.State.ACTIVE
+                } else {
+                    showMessage(getString(R.string.guide_not_sure), null, speak = !auto)
+                }
                 is GuideResult.Failed -> if (result.missingKey) {
                     showMessage(getString(R.string.guide_no_key), getString(R.string.guide_no_key_body), speak = !auto)
                 } else {
@@ -177,6 +188,7 @@ class GuideService : AccessibilityService() {
         shown = null
         analysedHash = null
         lastSpoken = null
+        autoMisses = 0
         firstPendingEventAt = 0L
         speaker?.stop()
         highlight?.hide()
@@ -203,12 +215,17 @@ class GuideService : AccessibilityService() {
         // because pages with carousels or clocks never go quiet.
         val now = SystemClock.elapsedRealtime()
         if (firstPendingEventAt == 0L) firstPendingEventAt = now
-        val wait = minOf(SETTLE_MS, (firstPendingEventAt + MAX_SETTLE_MS - now).coerceAtLeast(0L))
+        // While a ring is up the first pass is quick and only re-positions it (no model call),
+        // so the ring keeps up with scrolling and with pages whose layout shifts.
+        val tracking = shown != null
+        val quiet = if (tracking) TRACK_MS else SETTLE_MS
+        val cap = if (tracking) MAX_TRACK_MS else MAX_SETTLE_MS
+        val wait = minOf(quiet, (firstPendingEventAt + cap - now).coerceAtLeast(0L))
         settle?.cancel()
         settle = scope.launch {
             delay(wait)
             firstPendingEventAt = 0L
-            onScreenSettled()
+            onScreenSettled(trackingPass = tracking)
         }
     }
 
@@ -218,7 +235,7 @@ class GuideService : AccessibilityService() {
      *  - the ringed element is still there: the user has not acted yet, keep the ring on it;
      *  - otherwise the user moved on: analyse the new screen, without another bubble tap.
      */
-    private fun onScreenSettled() {
+    private fun onScreenSettled(trackingPass: Boolean = false) {
         if (!sessionActive) return
         val snap = ScreenReader.read(this) ?: return
 
@@ -226,11 +243,30 @@ class GuideService : AccessibilityService() {
         if (was != null) {
             val oldTop = was.bounds[1]
             val match = snap.nodes.withIndex()
-                .filter { (_, n) -> n.role == was.role && n.text == was.text && n.desc == was.desc && n.id == was.id }
+                // Same element = same role and labels. The hint counts too: two empty text
+                // fields differ only by it, and a field the user typed into no longer matches,
+                // which is what moves the guide on to the next step.
+                .filter { (_, n) -> n.role == was.role && n.text == was.text && n.desc == was.desc && n.id == was.id && n.hint == was.hint }
                 .minByOrNull { (_, n) -> abs(n.bounds[1] - oldTop) }
             if (match != null) {
                 shown = match.value
                 highlight?.moveTarget(snap.rects[match.index])
+                return
+            }
+            if (trackingPass) {
+                // The element is gone, but this was the quick pass: take the ring down (it
+                // points at nothing now) and give the new screen the normal settle time
+                // before spending a model call on it. With the ring down, later events use
+                // the capped debounce, so a page that never goes quiet cannot postpone this.
+                shown = null
+                highlight?.hide()
+                firstPendingEventAt = SystemClock.elapsedRealtime()
+                settle?.cancel()
+                settle = scope.launch {
+                    delay(SETTLE_MS)
+                    firstPendingEventAt = 0L
+                    onScreenSettled()
+                }
                 return
             }
         }
@@ -238,10 +274,13 @@ class GuideService : AccessibilityService() {
 
         // Rate limit: a screen that keeps changing must not turn into a stream of model calls.
         val sinceLast = SystemClock.elapsedRealtime() - lastAnalysisAt
-        if (sinceLast < MIN_AUTO_INTERVAL_MS) {
+        // Back off when automatic calls keep coming back unsure (a carousel page the model
+        // cannot help with): 1.5 s, 3 s, 6 s ... 24 s. A ring or a bubble tap resets it.
+        val minInterval = MIN_AUTO_INTERVAL_MS shl autoMisses.coerceAtMost(4)
+        if (sinceLast < minInterval) {
             settle?.cancel()
             settle = scope.launch {
-                delay(MIN_AUTO_INTERVAL_MS - sinceLast)
+                delay(minInterval - sinceLast)
                 onScreenSettled()
             }
             return
@@ -290,6 +329,8 @@ class GuideService : AccessibilityService() {
         const val TAG = "ChiDay"
         private const val SETTLE_MS = 800L
         private const val MAX_SETTLE_MS = 2500L
+        private const val TRACK_MS = 250L
+        private const val MAX_TRACK_MS = 600L
         private const val MIN_AUTO_INTERVAL_MS = 1500L
         private const val MESSAGE_MS = 7000L
         private const val IDLE_SESSION_MS = 5 * 60 * 1000L

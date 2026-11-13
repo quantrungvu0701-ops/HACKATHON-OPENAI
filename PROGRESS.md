@@ -136,3 +136,35 @@ at with `curl "http://localhost:8787/pick?q=<regex>"`.
   session is active. `bash tools/follow_mode_test.sh`: 4 rings over 4 Settings screens,
   1 bubble tap, 3 automatic re-analyses, 4 spoken. The same instruction is not spoken twice
   in a row, and an unsure answer in follow mode is shown without speech.
+- **M8 (2026-11-14) PASS on emulator against the dev stub; phone check pending.** Playbook
+  schema + `PlaybookStore` (assets + `filesDir/playbooks`), two hand-written flows for
+  vnpost.vn in Chrome, written from the live site's accessibility tree:
+  `vnpost-tim-buu-cuc` (4 steps over 2 screens) and `vnpost-theo-doi-buu-gui` (3 steps on one
+  screen; the user types the code and the captcha themself, the guide stops at the
+  "Theo dõi" button). Home lists playbook goals as one-tap buttons. The engine picks the
+  playbook by app/host + goal, sends it with `LIKELY_STEP` (signal matching, ties broken by
+  session progress), forces `total_steps` and `caution` from the playbook, and labels
+  non-playbook steps "chưa kiểm chứng". Verified live: one bubble tap, step 1 ring on
+  "Tìm Bưu Cục", tap, step 2 on the next page; and for tracking, typing in a field moved the
+  guide to the next step each time (1 -> 2 -> 3). The stub follows the playbook literally, so
+  it rings the "Tỉnh/Thành phố" label rather than the unlabeled dropdown under it; whether a
+  real model picks the dropdown is untested. dichvucong.gov.vn is still unreachable from this
+  network, so no playbook targets it yet.
+- **Fixes found while testing M7/M8 (2026-11-14).**
+  (1) `guide_service.xml` now sets `android:isAccessibilityTool="true"`. On Android 14 a
+  window protected against tap-jacking (`filterTouchesWhenObscured` /
+  `accessibilityDataSensitive`; e.g. Settings > Data Saver > Unrestricted data, and likely
+  login and payment screens of real services) returned `root=null` to our service, so the
+  guide was blind there. With the flag the same page reads normally. Play Store reviews this
+  flag strictly: the app has to genuinely be an accessibility tool for the listing.
+  (2) The ringed element is now matched by role, text, desc, id **and hint**: before, typing
+  into a text field made the ring jump to the other empty text field.
+  (3) While a ring is up a quick pass (250 ms quiet, 600 ms cap) only re-positions it, so it
+  keeps up with scrolling and layout shifts (vnpost's banner changes height); a model call
+  still waits for the normal 800 ms settle.
+  (4) The first automatic "not sure" in a row is silent (usually a page still loading), and
+  repeated automatic misses back off 1.5 s, 3 s ... 24 s so a carousel page cannot turn into
+  a stream of model calls.
+  (5) When no app window can be read the log prints every window's type and root under tag
+  `ChiDay` ("no app root. windows=..."): first thing to check if the phone shows
+  "Tôi chưa đọc được màn hình này".

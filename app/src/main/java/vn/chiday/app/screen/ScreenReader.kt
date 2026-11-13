@@ -2,6 +2,7 @@ package vn.chiday.app.screen
 
 import android.accessibilityservice.AccessibilityService
 import android.graphics.Rect
+import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import kotlinx.serialization.SerialName
@@ -65,6 +66,9 @@ object ScreenReader {
     private const val MAX_VISITED = 4000
     private const val MAX_TEXT = 80
     private val LONG_DIGITS = Regex("\\d{6,}")
+
+    /** Icon-font glyphs (private-use area) and zero-width characters that sites put in labels. */
+    private val JUNK = Regex("[\\uE000-\\uF8FF\\u200B-\\u200F\\uFEFF]")
     private val BROWSER_URL_BAR_IDS = listOf(":id/url_bar", ":id/location_bar_edit_text", ":id/mozac_browser_toolbar_url_view")
 
     fun read(service: AccessibilityService): ScreenSnapshot? {
@@ -91,7 +95,16 @@ object ScreenReader {
             val r = w.root ?: continue
             if (r.packageName?.toString() != own) return r
         }
-        return service.rootInActiveWindow?.takeIf { it.packageName?.toString() != own }
+        service.rootInActiveWindow?.takeIf { it.packageName?.toString() != own }?.let { return it }
+        // Nothing usable: say why in the log, this is the first thing to look at on a new phone.
+        val all = runCatching { service.windows }.getOrDefault(emptyList())
+        Log.w(
+            "ChiDay",
+            "no app root. windows=" + all.joinToString { w ->
+                "type=${w.type} focused=${w.isFocused} active=${w.isActive} root=${w.root?.packageName}"
+            },
+        )
+        return null
     }
 
     private class Walker(private val screen: Rect) {
@@ -204,7 +217,7 @@ object ScreenReader {
     /** Privacy filter: trims, collapses whitespace, masks digit runs of 6 or more. */
     internal fun clean(cs: CharSequence?): String? {
         if (cs.isNullOrBlank()) return null
-        val s = cs.toString().replace(Regex("\\s+"), " ").trim()
+        val s = cs.toString().replace(JUNK, "").replace(Regex("\\s+"), " ").trim()
         if (s.isEmpty()) return null
         val masked = LONG_DIGITS.replace(s) { "•".repeat(6) }
         return if (masked.length > MAX_TEXT) masked.take(MAX_TEXT - 1) + "…" else masked

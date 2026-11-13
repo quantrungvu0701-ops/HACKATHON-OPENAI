@@ -38,6 +38,7 @@
     <string name="check_voice_missing">Chưa có giọng tiếng Việt. Chỉ Đây vẫn hiện chữ. Bấm để cài giọng đọc.</string>
     <string name="home_build">Bản dựng %1$s</string>
     <string name="home_goal_label">Bác muốn làm việc gì?</string>
+    <string name="home_goal_known">Việc đã có hướng dẫn từng bước:</string>
     <string name="home_goal_hint">Ví dụ: tra cứu hồ sơ, nộp tiền điện</string>
 
     <!-- Overlay messages -->
