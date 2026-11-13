@@ -23,10 +23,19 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,6 +51,7 @@ import vn.chiday.app.settings.SettingsStore
 
 enum class CheckState { OK, WARN, MISSING }
 
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun HomeScreen(
     resumeTick: Int,
@@ -72,7 +82,8 @@ fun HomeScreen(
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .semantics { testTagsAsResourceId = true },
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge, color = Brand)
@@ -122,6 +133,8 @@ fun HomeScreen(
 
         Spacer(Modifier.height(4.dp))
 
+        GoalField()
+
         // A key that is saved but untested still lets the user start; a missing key does not.
         val ready = serviceState == CheckState.OK && aiState != CheckState.MISSING
         Button(
@@ -149,6 +162,29 @@ fun HomeScreen(
             shape = RoundedCornerShape(16.dp),
         ) { Text(stringResource(R.string.home_open_settings)) }
     }
+}
+
+/** The user's goal in their own words. Saved as they type so it survives kill-and-reopen. */
+@Composable
+private fun GoalField() {
+    val context = LocalContext.current
+    val store = remember { SettingsStore(context) }
+    var goal by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { if (goal == null) goal = store.currentGoal() }
+    LaunchedEffect(goal) {
+        val g = goal ?: return@LaunchedEffect
+        delay(400)
+        store.saveGoal(g)
+    }
+    OutlinedTextField(
+        value = goal.orEmpty(),
+        onValueChange = { goal = it },
+        label = { Text(stringResource(R.string.home_goal_label)) },
+        placeholder = { Text(stringResource(R.string.home_goal_hint)) },
+        textStyle = MaterialTheme.typography.bodyLarge,
+        maxLines = 2,
+        modifier = Modifier.fillMaxWidth().testTag("field_goal"),
+    )
 }
 
 @Composable

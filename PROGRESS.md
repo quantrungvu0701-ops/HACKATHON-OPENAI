@@ -63,3 +63,16 @@ Emulator notes:
   First thing with the host's key: PHONE_CHECKLIST item 8. Cleartext HTTP is allowed in
   the manifest because the host's base URL is unknown and may be a plain-http gateway.
   The emulator still holds the stub settings (key `test-key`). Next: M4.
+- **M4 (2026-11-14) PASS on emulator against the dev stub.** `GuideEngine` (prompt contract,
+  lenient JSON parse that strips code fences, validation: target must be an existing index,
+  confidence >= 0.5) and `HighlightWindow` (full-screen `FLAG_NOT_TOUCHABLE` overlay: dim,
+  pulsing ring, arrow for small targets, instruction card). In Chrome on chinhphu.vn the ring
+  landed exactly on the "English" link (node rect 462,440-616,485), an `adb` tap at the ring
+  went through to Chrome (navigated to vietnam.gov.vn), and the ring cleared itself when the
+  target left the screen. `target=null` shows "Tôi chưa chắc…". Bubble: tap = analyse,
+  tap while thinking = cancel, tap while a ring is up = end session. If the user scrolls,
+  the ring follows the same element. Home has a goal field ("Bác muốn làm việc gì?") that is
+  sent as GOAL. **Which element a real model picks is untested** (stub picks by regex).
+  Testing note: `adb shell uiautomator dump` suspends accessibility services while it runs,
+  so do not use it during a guide session; use screenshots and `adb logcat -s ChiDay`.
+  Next: M5.

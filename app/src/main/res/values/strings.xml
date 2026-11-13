@@ -32,6 +32,19 @@
     <string name="home_open_settings">Cài đặt kết nối AI</string>
     <string name="home_not_ready_ai">Bác cần nhập khóa AI trong Cài đặt trước.</string>
 
+    <string name="home_goal_label">Bác muốn làm việc gì?</string>
+    <string name="home_goal_hint">Ví dụ: tra cứu hồ sơ, nộp tiền điện</string>
+
+    <!-- Overlay messages -->
+    <string name="guide_not_sure">Tôi chưa chắc, bác thử kéo xuống hoặc hỏi lại.</string>
+    <string name="guide_no_screen">Tôi chưa đọc được màn hình này.</string>
+    <string name="guide_no_key">Chưa có khóa AI</string>
+    <string name="guide_no_key_body">Bác mở ứng dụng Chỉ Đây và nhập khóa trong Cài đặt.</string>
+    <string name="guide_failed">Chưa kết nối được với AI</string>
+    <string name="guide_failed_body">Bác kiểm tra mạng rồi bấm nút cam lần nữa.</string>
+    <string name="guide_step">Bước %1$d/%2$d</string>
+    <string name="guide_caution">Bác kiểm tra kỹ thông tin trước khi bấm.</string>
+
     <!-- Settings -->
     <string name="settings_back">‹ Quay lại</string>
     <string name="settings_title">Cài đặt kết nối AI</string>

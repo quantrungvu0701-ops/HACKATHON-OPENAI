@@ -65,7 +65,17 @@ class SettingsStore(context: Context) {
         }
     }
 
+    /** What the user said they want to do; sent to the model as the goal. */
+    val goalFlow: Flow<String> = store.data.map { it[GOAL] ?: "" }
+
+    suspend fun currentGoal(): String = goalFlow.first()
+
+    suspend fun saveGoal(goal: String) {
+        store.edit { it[GOAL] = goal.trim() }
+    }
+
     private companion object {
+        val GOAL = stringPreferencesKey("goal")
         val PROVIDER = stringPreferencesKey("provider")
         val BASE_URL = stringPreferencesKey("base_url")
         val MODEL = stringPreferencesKey("model")
