@@ -48,6 +48,7 @@
     <string name="guide_failed">Chưa kết nối được với AI</string>
     <string name="guide_failed_body">Bác kiểm tra mạng rồi bấm nút cam lần nữa.</string>
     <string name="guide_step">Bước %1$d/%2$d</string>
+    <string name="guide_unverified">chưa kiểm chứng</string>
     <string name="guide_caution">Bác kiểm tra kỹ thông tin trước khi bấm.</string>
 
     <!-- Settings -->

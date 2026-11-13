@@ -122,3 +122,17 @@ clients already accept `imageJpeg`).
 Dev stub: `python tools/stub/stub_server.py`, then in the app set provider "OpenAI / tương
 thích", base URL `http://10.0.2.2:8787/v1`, any model name, any key. Choose what it points
 at with `curl "http://localhost:8787/pick?q=<regex>"`.
+- **Team setup (2026-11-14).** Repo renamed to `HACKATHON-OPENAI`. Debug builds on every
+  machine and in CI are signed with the committed `keystore/debug.keystore`, so APKs from
+  different laptops install over each other; a device with an older build needs one
+  `adb uninstall vn.chiday.app` first. `PROGRESS.md` is union-merged. Home shows the commit
+  id of the build. Team rules are in `README.md`.
+- **M7 (2026-11-14) PASS on emulator against the dev stub.** Follow mode: one bubble tap
+  starts a session; after each screen change the service waits for 800 ms of quiet (2.5 s at
+  most, for pages that never go quiet), skips screens whose node hash is unchanged or where
+  the ringed element is still present (the ring follows it instead), and otherwise analyses
+  again, one request in flight, at most one automatic call per 1.5 s. A second tap ends the
+  session; a session with no analysis for 5 minutes ends itself. Bubble is green while a
+  session is active. `bash tools/follow_mode_test.sh`: 4 rings over 4 Settings screens,
+  1 bubble tap, 3 automatic re-analyses, 4 spoken. The same instruction is not spoken twice
+  in a row, and an unsure answer in follow mode is shown without speech.

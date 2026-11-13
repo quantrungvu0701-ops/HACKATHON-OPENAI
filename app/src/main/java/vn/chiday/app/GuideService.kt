@@ -3,7 +3,7 @@ package vn.chiday.app
 import android.accessibilityservice.AccessibilityService
 import android.content.ComponentName
 import android.content.Context
-import android.graphics.Rect
+import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -22,6 +22,7 @@ import vn.chiday.app.guide.GuideResult
 import vn.chiday.app.guide.Speaker
 import vn.chiday.app.overlay.BubbleWindow
 import vn.chiday.app.overlay.HighlightWindow
+import vn.chiday.app.playbook.PlaybookStore
 import vn.chiday.app.screen.ScreenReader
 import vn.chiday.app.screen.ScreenSnapshot
 import vn.chiday.app.screen.UiNode
@@ -31,6 +32,10 @@ import kotlin.math.abs
 /**
  * The core of the app. One accessibility permission gives us the overlay windows and the
  * screen tree. Guide-only: this class must never call performAction or dispatchGesture.
+ *
+ * Session model (MECHANISM.md §2.5): one bubble tap starts a session; while it is active the
+ * service re-analyses on its own each time the screen moves on; a second tap ends it.
+ * Nothing is read outside a session.
  */
 class GuideService : AccessibilityService() {
 
@@ -41,19 +46,30 @@ class GuideService : AccessibilityService() {
     private var highlight: HighlightWindow? = null
     private var speaker: Speaker? = null
 
-    /** The model call in flight. One at a time; a new tap cancels the old one. */
+    private var sessionActive = false
+
+    /** The model call in flight. One at a time; a newer analysis cancels the old one. */
     private var analysis: Job? = null
     private var settle: Job? = null
     private var messageTimeout: Job? = null
+    private var idleTimeout: Job? = null
 
-    /** The node currently ringed, so the ring can follow a scroll or clear when the screen moves on. */
+    /** The node currently ringed, so the ring can follow a scroll and we can tell when it is gone. */
     private var shown: UiNode? = null
+
+    /** Hash of the last screen sent to the model: an unchanged screen is never analysed twice. */
+    private var analysedHash: Int? = null
+    private var lastAnalysisAt = 0L
+    private var firstPendingEventAt = 0L
+
+    /** What was last spoken, so a re-analysis that gives the same instruction stays quiet. */
+    private var lastSpoken: String? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
         settings = SettingsStore(this)
-        engine = GuideEngine(settings)
+        engine = GuideEngine(settings, PlaybookStore(this))
         highlight = HighlightWindow(this)
         speaker = Speaker(this)
         bubble = BubbleWindow(this, ::onBubbleTap).also { it.show() }
@@ -61,46 +77,47 @@ class GuideService : AccessibilityService() {
         Log.i(TAG, "service connected, bubble shown")
     }
 
-    /** Idle: analyse this screen. Thinking: cancel. Ring showing: end the session. */
     private fun onBubbleTap() {
-        when {
-            analysis?.isActive == true -> {
-                Log.i(TAG, "tap while thinking: cancelled")
-                endSession()
-            }
-
-            highlight?.isShowingTarget == true -> {
-                Log.i(TAG, "tap while guiding: session ended")
-                endSession()
-            }
-
-            else -> analyse()
+        if (sessionActive) {
+            Log.i(TAG, "bubble tap: session ended")
+            endSession()
+        } else {
+            Log.i(TAG, "bubble tap: session started")
+            sessionActive = true
+            engine.resetSession()
+            analyse(auto = false)
         }
     }
 
-    private fun analyse() {
-        clearOverlay()
-        // The overlay is hidden before the tree is read, and our own windows are skipped anyway.
-        val snap = ScreenReader.read(this)
+    /** [auto] is true when follow mode triggered this, false for the user's own tap. */
+    private fun analyse(auto: Boolean, preRead: ScreenSnapshot? = null) {
+        analysis?.cancel()
+        messageTimeout?.cancel()
+        // Our own windows are skipped by the reader, so the ring can stay up while we look.
+        val snap = preRead ?: ScreenReader.read(this)
         if (snap == null) {
             Log.w(TAG, "no readable app window")
-            showMessage(getString(R.string.guide_no_screen), null)
+            if (!auto) showMessage(getString(R.string.guide_no_screen), null, speak = true)
             return
         }
         logSnapshot(snap)
+        analysedHash = snap.hash
+        lastAnalysisAt = SystemClock.elapsedRealtime()
+        armIdleTimeout()
         bubble?.state = BubbleWindow.State.THINKING
         analysis = scope.launch {
             engine.goal = settings.currentGoal()
-            val started = android.os.SystemClock.elapsedRealtime()
+            val started = SystemClock.elapsedRealtime()
             val result = engine.decide(snap)
-            Log.i(TAG, "decision in ${android.os.SystemClock.elapsedRealtime() - started} ms: $result")
+            Log.i(TAG, "decision (auto=$auto) in ${SystemClock.elapsedRealtime() - started} ms: $result")
             when (result) {
                 is GuideResult.Show -> show(result, snap)
-                is GuideResult.NotSure -> showMessage(getString(R.string.guide_not_sure), null)
+                // In follow mode an unsure answer is shown quietly: the user did not ask just now.
+                is GuideResult.NotSure -> showMessage(getString(R.string.guide_not_sure), null, speak = !auto)
                 is GuideResult.Failed -> if (result.missingKey) {
-                    showMessage(getString(R.string.guide_no_key), getString(R.string.guide_no_key_body))
+                    showMessage(getString(R.string.guide_no_key), getString(R.string.guide_no_key_body), speak = !auto)
                 } else {
-                    showMessage(getString(R.string.guide_failed), getString(R.string.guide_failed_body))
+                    showMessage(getString(R.string.guide_failed), getString(R.string.guide_failed_body), speak = !auto)
                 }
             }
         }
@@ -112,7 +129,9 @@ class GuideService : AccessibilityService() {
         val title = reply.subtitle?.trim()?.takeIf { it.isNotEmpty() } ?: say
         val step = reply.step
         val total = reply.totalSteps
-        val footer = if (step != null && total != null && step in 1..total) getString(R.string.guide_step, step, total) else null
+        val stepLabel = if (step != null && total != null && step in 1..total) getString(R.string.guide_step, step, total) else null
+        val footer = listOfNotNull(stepLabel, getString(R.string.guide_unverified).takeIf { !result.verified })
+            .joinToString(" · ").takeIf { it.isNotEmpty() }
         val body = listOfNotNull(
             say.takeIf { it.isNotEmpty() && it != title },
             getString(R.string.guide_caution).takeIf { reply.caution },
@@ -122,18 +141,25 @@ class GuideService : AccessibilityService() {
         highlight?.showTarget(result.rect, title, body, footer, reply.caution)
         bubble?.bringToFront()
         bubble?.state = BubbleWindow.State.ACTIVE
+
         // Spoken text: the full sentence, plus the warning before payment / submit / delete.
         val spoken = listOfNotNull(say.ifEmpty { title }, getString(R.string.guide_caution).takeIf { reply.caution }).joinToString(" ")
-        speaker?.speak(spoken)
-        Log.i(TAG, "ring on node ${result.targetIndex} at ${result.rect.toShortString()} caution=${reply.caution}")
+        if (spoken != lastSpoken) {
+            speaker?.speak(spoken)
+            lastSpoken = spoken
+        }
+        Log.i(TAG, "ring on node ${result.targetIndex} at ${result.rect.toShortString()} caution=${reply.caution} verified=${result.verified}")
     }
 
-    private fun showMessage(title: String, body: String?) {
+    private fun showMessage(title: String, body: String?, speak: Boolean) {
         shown = null
         highlight?.showMessage(title, body)
         bubble?.bringToFront()
-        bubble?.state = BubbleWindow.State.IDLE
-        speaker?.speak(listOfNotNull(title, body).joinToString(". "))
+        bubble?.state = if (sessionActive) BubbleWindow.State.ACTIVE else BubbleWindow.State.IDLE
+        if (speak) {
+            speaker?.speak(listOfNotNull(title, body).joinToString(". "))
+            lastSpoken = null
+        }
         Log.i(TAG, "message: $title")
         messageTimeout?.cancel()
         messageTimeout = scope.launch {
@@ -142,52 +168,88 @@ class GuideService : AccessibilityService() {
         }
     }
 
-    private fun clearOverlay() {
+    private fun endSession() {
+        sessionActive = false
         analysis?.cancel()
         settle?.cancel()
         messageTimeout?.cancel()
+        idleTimeout?.cancel()
         shown = null
+        analysedHash = null
+        lastSpoken = null
+        firstPendingEventAt = 0L
         speaker?.stop()
         highlight?.hide()
         bubble?.state = BubbleWindow.State.IDLE
+        if (::engine.isInitialized) engine.resetSession()
     }
 
-    private fun endSession() {
-        clearOverlay()
-        engine.resetSession()
+    /** A forgotten session must not keep reading the screen: it ends itself after a quiet spell. */
+    private fun armIdleTimeout() {
+        idleTimeout?.cancel()
+        idleTimeout = scope.launch {
+            delay(IDLE_SESSION_MS)
+            Log.i(TAG, "session idle for ${IDLE_SESSION_MS / 1000}s: ended")
+            endSession()
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Only watched while a ring is up; nothing is read outside a session.
-        if (shown == null || event == null) return
+        // Events are only acted on inside a session; nothing is read outside one.
+        if (!sessionActive || event == null) return
         if (event.packageName == packageName) return
+
+        // Debounce: wait for SETTLE_MS of quiet, but never longer than MAX_SETTLE_MS in total,
+        // because pages with carousels or clocks never go quiet.
+        val now = SystemClock.elapsedRealtime()
+        if (firstPendingEventAt == 0L) firstPendingEventAt = now
+        val wait = minOf(SETTLE_MS, (firstPendingEventAt + MAX_SETTLE_MS - now).coerceAtLeast(0L))
         settle?.cancel()
         settle = scope.launch {
-            delay(SETTLE_MS)
-            recheckTarget()
+            delay(wait)
+            firstPendingEventAt = 0L
+            onScreenSettled()
         }
     }
 
     /**
-     * The screen changed while a ring was showing. If the same element is still there (the
-     * user scrolled) the ring follows it; if it is gone (the user moved on) the ring is cleared
-     * so it never points at the wrong thing. Milestone 7 replaces "clear" with "analyse again".
+     * Follow mode. The screen changed and has settled:
+     *  - same content as last analysed: nothing to do (at most the ring follows a scroll);
+     *  - the ringed element is still there: the user has not acted yet, keep the ring on it;
+     *  - otherwise the user moved on: analyse the new screen, without another bubble tap.
      */
-    private fun recheckTarget() {
-        val was = shown ?: return
-        val snap = ScreenReader.read(this)
-        val oldTop = was.bounds[1]
-        val match = snap?.nodes?.withIndex()
-            ?.filter { (_, n) -> n.role == was.role && n.text == was.text && n.desc == was.desc && n.id == was.id }
-            ?.minByOrNull { (_, n) -> abs(n.bounds[1] - oldTop) }
-        if (snap == null || match == null) {
-            Log.i(TAG, "target left the screen: ring cleared")
-            clearOverlay()
+    private fun onScreenSettled() {
+        if (!sessionActive) return
+        val snap = ScreenReader.read(this) ?: return
+
+        val was = shown
+        if (was != null) {
+            val oldTop = was.bounds[1]
+            val match = snap.nodes.withIndex()
+                .filter { (_, n) -> n.role == was.role && n.text == was.text && n.desc == was.desc && n.id == was.id }
+                .minByOrNull { (_, n) -> abs(n.bounds[1] - oldTop) }
+            if (match != null) {
+                shown = match.value
+                highlight?.moveTarget(snap.rects[match.index])
+                return
+            }
+        }
+        if (snap.hash == analysedHash) return
+
+        // Rate limit: a screen that keeps changing must not turn into a stream of model calls.
+        val sinceLast = SystemClock.elapsedRealtime() - lastAnalysisAt
+        if (sinceLast < MIN_AUTO_INTERVAL_MS) {
+            settle?.cancel()
+            settle = scope.launch {
+                delay(MIN_AUTO_INTERVAL_MS - sinceLast)
+                onScreenSettled()
+            }
             return
         }
-        val rect: Rect = snap.rects[match.index]
-        shown = match.value
-        highlight?.moveTarget(rect)
+        Log.i(TAG, "screen moved on: analysing again (follow mode)")
+        shown = null
+        highlight?.hide()
+        analyse(auto = true, preRead = snap)
     }
 
     private fun logSnapshot(snap: ScreenSnapshot) {
@@ -212,11 +274,7 @@ class GuideService : AccessibilityService() {
     }
 
     private fun teardown() {
-        analysis?.cancel()
-        settle?.cancel()
-        messageTimeout?.cancel()
-        shown = null
-        highlight?.hide()
+        endSession()
         highlight = null
         speaker?.shutdown()
         speaker = null
@@ -231,7 +289,10 @@ class GuideService : AccessibilityService() {
     companion object {
         const val TAG = "ChiDay"
         private const val SETTLE_MS = 800L
+        private const val MAX_SETTLE_MS = 2500L
+        private const val MIN_AUTO_INTERVAL_MS = 1500L
         private const val MESSAGE_MS = 7000L
+        private const val IDLE_SESSION_MS = 5 * 60 * 1000L
         private val NODE_JSON = Json { explicitNulls = false }
 
         @Volatile
