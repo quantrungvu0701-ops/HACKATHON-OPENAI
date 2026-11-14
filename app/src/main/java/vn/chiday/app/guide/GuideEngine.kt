@@ -86,11 +86,30 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
 
     private var pending: Pending? = null
 
+    /** Set when the user pressed the ringed target and the screen stayed: told to the model once. */
+    private var userActed = false
+
+    /**
+     * True when the playbook's next step happens on this same screen (CapCut: split, split
+     * again, delete all sit on the editor). After a press on the ring the guide then moves on
+     * in place instead of waiting for a screen change that will not come.
+     */
+    fun nextStepIsHere(snapshot: ScreenSnapshot): Boolean {
+        val pb = sessionPlaybook ?: return false
+        val n = lastStepN ?: return false
+        return pb.appliesTo(snapshot) && pb.likelyStep(snapshot, n)?.n == n + 1
+    }
+
+    fun noteUserActed() {
+        userActed = true
+    }
+
     fun resetSession() {
         lastStep = null
         lastStepN = null
         sessionPlaybook = null
         pending = null
+        userActed = false
     }
 
     /**
@@ -160,9 +179,18 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
     }
 
     private fun userMessage(snapshot: ScreenSnapshot, playbook: Playbook?, likely: Playbook.Step?): String = buildString {
-        val g = goal?.takeIf { it.isNotBlank() } ?: playbook?.goal
+        // A goal picked for another service (the user chose "birth certificate" on Home, then
+        // opened the post office site) must not fight the playbook of the app on screen.
+        val typed = goal?.trim()?.takeIf { it.isNotEmpty() }
+        val foreign = typed != null && playbook != null && !typed.equals(playbook.goal, ignoreCase = true) &&
+            playbooks.all().any { it.id != playbook.id && it.goal.equals(typed, ignoreCase = true) }
+        val g = if (foreign) playbook?.goal else typed ?: playbook?.goal
         append("GOAL: ").append(g ?: "not stated; choose the most likely next step on this screen").append('\n')
         append("LAST_STEP: ").append(lastStep ?: "none").append('\n')
+        if (userActed) {
+            userActed = false
+            append("USER_ACTION: the user has just pressed the target of the last step and the screen stayed the same; continue with the step after it\n")
+        }
         if (playbook == null) {
             append("PLAYBOOK: none\n")
         } else {

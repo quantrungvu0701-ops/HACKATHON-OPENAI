@@ -184,7 +184,29 @@ class GuideService : AccessibilityService() {
                 stuckCheck?.cancel()
             }
             when (result) {
-                is GuideResult.Show -> show(result, snap)
+                is GuideResult.Show -> {
+                    // The model took a second or two: the page may have shifted meanwhile. Put
+                    // the ring where the chosen element is NOW; if it is gone, look again.
+                    val fresh = ScreenReader.read(this@GuideService)
+                    if (fresh == null || fresh.hash == snap.hash) {
+                        show(result, snap)
+                    } else {
+                        val chosen = snap.nodes[result.targetIndex]
+                        val at = fresh.nodes.indexOfFirst { GuideEngine.sameElement(it, chosen) }
+                        if (at >= 0) {
+                            show(result.copy(targetIndex = at, rect = Rect(fresh.rects[at])), fresh)
+                        } else {
+                            Log.i(TAG, "screen changed during the model call and the target is gone: looking again")
+                            bubble?.state = BubbleWindow.State.ACTIVE
+                            analysedHash = null
+                            settle?.cancel()
+                            settle = scope.launch {
+                                delay(SETTLE_MS)
+                                onScreenSettled()
+                            }
+                        }
+                    }
+                }
                 is GuideResult.Move -> showMove(result)
                 // In follow mode an unsure answer is shown quietly: the user did not ask just now.
                 is GuideResult.NotSure -> if (auto && autoMisses == 1) {
@@ -306,9 +328,22 @@ class GuideService : AccessibilityService() {
         val hashAtTap = analysedHash
         stuckCheck?.cancel()
         stuckCheck = scope.launch {
-            delay(if (shownOnWeb) STUCK_WEB_MS else STUCK_MS)
-            if (!sessionActive || shown?.let { GuideEngine.sameElement(it, target) } != true || analysedHash != hashAtTap) return@launch
-            val now = ScreenReader.read(this@GuideService) ?: return@launch
+            fun stillThere() = sessionActive && shown?.let { GuideEngine.sameElement(it, target) } == true && analysedHash == hashAtTap
+            delay(if (shownOnWeb) STUCK_WEB_MS else ADVANCE_MS)
+            if (!stillThere()) return@launch
+            var now = ScreenReader.read(this@GuideService) ?: return@launch
+            if (engine.nextStepIsHere(now)) {
+                // The playbook's next step is on this same screen: move on without a screen change.
+                Log.i(TAG, "target pressed, next step is on this screen: analysing again")
+                engine.noteUserActed()
+                analyse(auto = true, preRead = now)
+                return@launch
+            }
+            if (!shownOnWeb) {
+                delay(STUCK_MS - ADVANCE_MS)
+                if (!stillThere()) return@launch
+                now = ScreenReader.read(this@GuideService) ?: return@launch
+            }
             if (now.hash != hashAtTap) return@launch
             stuckSaid = true
             feedback(getString(R.string.guide_stuck))
@@ -482,6 +517,17 @@ class GuideService : AccessibilityService() {
             }
             return
         }
+        if (analysis?.isActive == true) {
+            // A model call is in flight (it takes a second or two). Let it finish instead of
+            // cancelling and restarting on every twitch of a page with a carousel; its answer
+            // is placed on the fresh screen when it arrives.
+            settle?.cancel()
+            settle = scope.launch {
+                delay(IN_FLIGHT_POLL_MS)
+                onScreenSettled()
+            }
+            return
+        }
         Log.i(TAG, "screen moved on: analysing again (follow mode)")
         shown = null
         shownRect = null
@@ -536,6 +582,8 @@ class GuideService : AccessibilityService() {
         private const val MESSAGE_MS = 7000L
         private const val IDLE_SESSION_MS = 5 * 60 * 1000L
         private const val STUCK_MS = 4000L
+        private const val ADVANCE_MS = 1500L
+        private const val IN_FLIGHT_POLL_MS = 500L
         private const val STUCK_WEB_MS = 8000L
         private val MOVES_ON = setOf("button", "link", "item")
         private val PRESS = Regex("(?i)(?<![\\p{L}])(bấm|nhấn|chạm|ấn)(?![\\p{L}])")

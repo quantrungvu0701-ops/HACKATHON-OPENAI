@@ -1,0 +1,86 @@
+{
+  "id": "capcut-cat-doan-giua",
+  "service": "CapCut",
+  "match": {
+    "packages": [
+      "com.lemon.lvoverseas",
+      "com.lemon.lv"
+    ],
+    "hosts": []
+  },
+  "goal": "Cắt bỏ đoạn giữa của video",
+  "steps": [
+    {
+      "n": 1,
+      "signals": [
+        "New project",
+        "Dự án mới"
+      ],
+      "do": "Bấm vào «New project» (Dự án mới), ô lớn có dấu cộng ở phía trên",
+      "target_hint": "New project",
+      "pitfall": "Nếu có bảng quảng cáo hiện lên che màn hình, bác bấm dấu X để tắt trước."
+    },
+    {
+      "n": 2,
+      "signals": [
+        "Videos",
+        "Photos",
+        "Albums",
+        "Video",
+        "Ảnh",
+        "Album"
+      ],
+      "do": "Bấm vào video bác muốn cắt cho nó hiện dấu tích, rồi bấm nút «Add» (Thêm) ở góc dưới bên phải",
+      "target_hint": "Add",
+      "pitfall": "Phải chọn video trước, nút «Add» (Thêm) mới bấm được."
+    },
+    {
+      "n": 3,
+      "signals": [
+        "Split",
+        "Tách",
+        "Edit",
+        "Chỉnh sửa",
+        "Audio",
+        "Âm thanh",
+        "Volume",
+        "Âm lượng"
+      ],
+      "do": "Dùng ngón tay kéo dải hình video sang trái cho vạch trắng đứng đúng chỗ bắt đầu đoạn muốn bỏ, rồi bấm «Split» (Tách)",
+      "target_hint": "Split",
+      "pitfall": "Nếu chưa thấy nút «Split» (Tách), bác bấm một lần vào dải hình video, hoặc bấm «Edit» (Chỉnh sửa) ở hàng nút dưới cùng."
+    },
+    {
+      "n": 4,
+      "signals": [
+        "Split",
+        "Tách",
+        "Edit",
+        "Chỉnh sửa",
+        "Audio",
+        "Âm thanh",
+        "Volume",
+        "Âm lượng"
+      ],
+      "do": "Kéo dải hình video tiếp cho vạch trắng đứng đúng chỗ kết thúc đoạn muốn bỏ, rồi bấm «Split» (Tách) lần nữa",
+      "target_hint": "Split",
+      "pitfall": "Bây giờ video đã thành ba khúc: khúc đầu, khúc giữa cần bỏ và khúc cuối."
+    },
+    {
+      "n": 5,
+      "signals": [
+        "Split",
+        "Tách",
+        "Delete",
+        "Xóa",
+        "Xoá",
+        "Volume",
+        "Âm lượng"
+      ],
+      "do": "Bấm một lần vào khúc giữa trên dải hình cho nó có viền trắng, rồi bấm «Delete» (Xóa) ở hàng nút dưới cùng",
+      "target_hint": "Delete",
+      "pitfall": "Bác nhìn kỹ viền trắng đang bao đúng khúc giữa rồi hãy bấm. Xóa xong, khúc đầu và khúc cuối tự nối liền nhau. Lỡ xóa nhầm thì bấm mũi tên quay lại ở phía trên dải hình.",
+      "caution": true
+    }
+  ]
+}

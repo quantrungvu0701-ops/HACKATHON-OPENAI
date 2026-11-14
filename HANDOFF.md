@@ -57,3 +57,7 @@ before every push.
 
 (append one line per finished item)
 - Bubble on/off: hold the bubble 0.7 s or press «Tắt nút nổi» on Home to hide it; «Bắt đầu» / «Bật lại nút nổi» shows it again. Saved in SharedPreferences, checked on the emulator.
+- CapCut draft playbook `capcut-cat-doan-giua.json` (5 steps: New project, Add, Split, Split, Delete). UNVERIFIED: written from CapCut's known labels, never run; package names `com.lemon.lvoverseas` / `com.lemon.lv` unchecked. Needs the phone: `adb shell pm list packages | grep -i -e capcut -e lemon`, then a node dump per screen.
+- Same-screen steps: after a press on the ring, if the playbook's next step is on the same screen the guide re-analyses after 1.5 s (`GuideEngine.nextStepIsHere`). Untested on a real app.
+- Follow mode no longer cancels a model call in flight; the answer is placed on the fresh screen. Goal of another service no longer overrides the playbook of the app on screen. Both checked on the emulator with gpt-4.1 on vnpost.vn.
+- dichvucong.gov.vn does not load from the dev computer's network: check that flow on the phone only.
