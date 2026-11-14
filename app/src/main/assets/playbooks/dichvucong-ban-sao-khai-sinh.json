@@ -9,7 +9,7 @@
   },
   "goal": "Xem cần giấy tờ gì để xin bản sao Giấy khai sinh",
   "verified": {
-    "by": "team; steps 1-2 on a Galaxy A56 (Chrome, Android 16), step 3 on desktop Chrome at phone width only (the page did not load on the phone's mobile data); public pages only, no login",
+    "by": "team; steps 1-2 on a Galaxy A56 (Chrome, Android 16, Wi-Fi), step 3 on desktop Chrome only (ScreenReader loses the page when scrolled deep, see PROGRESS); public pages only, no login",
     "date": "2026-11-14"
   },
   "steps": [
@@ -28,7 +28,6 @@
       "n": 2,
       "signals": [
         "kết quả cho từ khóa",
-        "Hiển thị",
         "Thủ tục đăng ký khai sinh"
       ],
       "do": "Bấm vào dòng «Cấp bản sao Trích lục hộ tịch, bản sao Giấy khai sinh»",
@@ -38,10 +37,16 @@
     {
       "n": 3,
       "signals": [
-        "Trình Tự Thực Hiện",
-        "Thành phần hồ sơ",
+        "Nộp hồ sơ",
+        "Chọn Phường/ Xã",
+        "Tên thủ tục",
         "Mã thủ tục",
-        "Chọn cơ quan thực hiện"
+        "Lĩnh vực",
+        "Đối tượng thực hiện",
+        "Cơ quan có thẩm quyền",
+        "Trình Tự Thực Hiện",
+        "Cách Thức Thực Hiện",
+        "Thành phần hồ sơ"
       ],
       "do": "Kéo màn hình xuống tới phần «Thành phần hồ sơ». Đó là danh sách giấy tờ bác cần mang theo",
       "target_hint": "Thành phần hồ sơ",

@@ -289,3 +289,20 @@ Order of work when the phone and the host's key arrive:
   checked on desktop Chrome only: on the phone's mobile data the detail page stayed blank for
   more than 2 minutes, and pages took 40 to 60 s each. Chrome also shows an «Install» banner for
   the site. This demo needs Wi-Fi.
+- **dichvucong on Wi-Fi, and two ScreenReader bugs in Chrome (2026-11-14).** On the phone's
+  Wi-Fi each dichvucong page loads in a few seconds. One bubble tap on the home page, typing
+  «khai sinh», and follow mode moved to "Bước 2/3" by itself and ringed «Cấp bản sao ... Giấy khai
+  sinh». Fixed in the playbook: step 2's signal «Hiển thị» also matched «Hệ thống chỉ hiển thị...»
+  on the detail page, so the app stayed on step 2 there and ringed the page title. Step 3 now
+  uses words seen at the top of the detail page («Nộp hồ sơ», «Chọn Phường/ Xã», «Tên thủ tục»)
+  plus the section titles further down.
+  Step 3 still fails on the phone because of `ScreenReader`, reproduced with nothing else touching
+  the phone: (1) after about two swipes Chrome hides its address bar, the snapshot has
+  `host=null`, and no website playbook is picked (`playbook=none` with 20 nodes read).
+  (2) Scrolled further, the web content disappears from the snapshot: `nodes=0`, or `nodes=4`
+  (only Chrome's own buttons) once the address bar is back, while `uiautomator dump` at the same
+  spot lists about 540 nodes with the visible text. The same happens on a long Wikipedia page.
+  Not fixed yet. Ideas: keep the last host seen for the browser package while the URL bar is
+  hidden; find which check in `Walker.visit` stops inside the WebView subtree
+  (`isVisibleToUser` on a container, or the visit limits). Until then, keep demos to the top
+  part of a web page.
