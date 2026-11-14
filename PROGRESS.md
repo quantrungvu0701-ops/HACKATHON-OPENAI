@@ -223,3 +223,51 @@ Order of work when the phone and the host's key arrive:
 5. Pick the two or three demo targets and re-verify their playbooks on the phone the night
    before (checklist item 10). dichvucong.gov.vn needs a playbook written from its real
    screens once it is reachable: open it, tap the bubble, read the `node` lines in logcat.
+
+## Demo phone
+
+| What | Value |
+|---|---|
+| Manufacturer / model | samsung SM-A566B (Galaxy A56 5G) |
+| Android | 16 (SDK 36), One UI, system language English |
+| Screen | 1080x2340 |
+| Network during test | mobile data (LTE), no Wi-Fi |
+
+- **First run on the real phone (2026-11-14), build `dd32b8d` (CI artifact), against the dev
+  stub, no real model key yet.** The stub ran on a Windows laptop and reached the phone with
+  `adb reverse tcp:8787 tcp:8787`; base URL in the app `http://127.0.0.1:8787/v1`.
+  Checklist results:
+  item 1 recorded above; 2 and 3 done (Samsung: nothing extra was needed); 4 `Success`;
+  5 service on, bubble floating, Home green; 7 Google TTS Vietnamese voice present, Home green
+  (log shows speech started/done; still to be confirmed by ear); 8 PASS against the stub only
+  (79 ms), **real key still pending**; 9 PASS: 5/5 rounds of removing the task from recents,
+  reopening (three green checks, saved goal kept) and getting ring + speech; a `kill -9` of the
+  app process made Android restart the service under a new pid and the bubble and guide worked
+  with no re-setup; **Force stop** set `enabled_accessibility_services` to `null` and Home
+  showed the red row with "Mở Cài đặt trợ năng", key and voice stayed green; 11 PASS for
+  steps 1 and 2 of `vnpost-tim-buu-cuc` (ring on «Tìm Bưu Cục», "Bước 1/4", then follow mode
+  moved to "Bước 2/4" on the next page by itself, decision 29 to 59 ms with the stub);
+  12 PASS: Data saver > "Apps that can always use data" was read (40 nodes), no
+  "chưa đọc được"; 13 PASS with the picker and the two `make_test_docs.py` photos (sharp
+  "Ảnh dùng được", blurred "Ảnh cần chụp lại: Ảnh bị mờ..." read aloud); the real camera was
+  not used; 14 Home shows "Bản dựng dd32b8d". Item 6 (battery "Không hạn chế" / never-sleeping
+  apps) and item 10 still to do by hand.
+- **Differences from the emulator, found on the phone (2026-11-14).**
+  (1) vnpost.vn is slow on mobile data: about 30 s before the home page renders, and the
+  "Tìm Bưu Cục" page stayed half-loaded for minutes (raw `{{ ... }}` templates, province list
+  not clickable), so steps 3 and 4 of the playbook could not be run. A bubble tap before the
+  page has rendered gives "Tôi chưa chắc". For the demo: open the page well before, or use
+  Wi-Fi / a hotspot, and check it on the venue network.
+  (2) Android 16 prints window frames as `frame=[l,t][r,b]` inside the window block, so the
+  `bubble_centre` helper in `tools/follow_mode_test.sh` and `tools/kill_reopen_test.sh` found
+  no bubble. Both now fall back to the new format.
+  (3) Samsung recents are laid out sideways and the bubble floats above them, so the recents
+  swipe in `kill_reopen_test.sh` hit another app's card or dragged the bubble. The script now
+  also removes the task with `am stack remove <task>` (what a recents swipe does).
+  (4) The process survives a recents removal on Samsung too (bound accessibility service).
+  (5) UI: the bubble's default spot (right edge, mid-screen) covers the "Hiện" button of the
+  key field in Settings and the right end of "Bắt đầu" on Home. Not fixed; drag the bubble
+  away or move its default position.
+  (6) The Samsung photo picker is Google Photos with a "Done" button: one extra tap compared
+  with the emulator's picker. It shows the owner's whole gallery, so do the demo with a
+  sample card, not someone's real ID.

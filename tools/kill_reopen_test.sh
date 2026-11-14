@@ -17,6 +17,12 @@ pass=0
 bubble_centre() {
   local f
   f=$(adb shell dumpsys window windows | grep -o "ChiDayBubble, frame=\[[0-9,]*\]" | head -1 | grep -o "[0-9,]*\]" | tr -d ']')
+  if [ -z "$f" ]; then
+    # Android 15+ (seen on a Galaxy A56, Android 16) prints "frame=[l,t][r,b]" inside the window's block.
+    f=$(adb shell dumpsys window windows | sed -n '/Window{.*ChiDayBubble}:/,/Window #/p' \
+      | grep -o ' frame=\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]' | head -1 \
+      | tr -c '0-9\n' ',' | sed 's/^,*//; s/,,*/,/g; s/,$//')
+  fi
   [ -z "$f" ] && return 1
   IFS=, read -r l t r b <<< "$f"
   echo "$(( (l + r) / 2 )) $(( (t + b) / 2 ))"
@@ -35,6 +41,10 @@ for i in $(seq 1 "$ROUNDS"); do
   sleep 2
   adb shell input keyevent KEYCODE_HOME
   sleep 2
+  # Samsung One UI lays recents out sideways and the bubble floats over them, so the swipe
+  # above can miss the app's card. Remove the task directly then (what a recents swipe does).
+  tid=$(adb shell dumpsys activity recents | grep -oE "Task\{[0-9a-f]+ #[0-9]+ type=standard A=[0-9]+:$PKG" | grep -oE '#[0-9]+' | tr -d '#' | head -1)
+  [ -n "$tid" ] && adb shell am stack remove "$tid" >/dev/null 2>&1 && sleep 2
   tasks=$(adb shell dumpsys activity recents | grep -c "A=.*$PKG" | tr -d '\r')
   pid_after=$(adb shell pidof $PKG | tr -d '\r')
   echo "   swiped away: recents entries for app=$tasks pid $pid_before -> ${pid_after:-none}"
@@ -59,7 +69,7 @@ for i in $(seq 1 "$ROUNDS"); do
   [ -n "$SHOTS" ] && adb exec-out screencap -p > "$SHOTS/m6_ring_$i.png"
   ring=$(echo "$log" | grep -c "ring on node")
   speech=$(echo "$log" | grep -c "speech started")
-  overlay=$(adb shell dumpsys window windows | grep -c "ChiDayHighlight, frame")
+  overlay=$(adb shell dumpsys window windows | grep -c "ChiDayHighlight, frame\|Window{.*ChiDayHighlight}")
   # 4. End the session so the next round starts clean.
   adb shell input tap $c
   sleep 1

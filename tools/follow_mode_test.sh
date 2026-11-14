@@ -15,6 +15,12 @@ curl -s "http://localhost:8787/pick?q=Search%20settings~Network%20%26%20internet
 bubble_centre() {
   local f
   f=$(adb shell dumpsys window windows | grep -o "ChiDayBubble, frame=\[[0-9,]*\]" | head -1 | grep -o "[0-9,]*\]" | tr -d ']')
+  if [ -z "$f" ]; then
+    # Android 15+ (seen on a Galaxy A56, Android 16) prints "frame=[l,t][r,b]" inside the window's block.
+    f=$(adb shell dumpsys window windows | sed -n '/Window{.*ChiDayBubble}:/,/Window #/p' \
+      | grep -o ' frame=\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]' | head -1 \
+      | tr -c '0-9\n' ',' | sed 's/^,*//; s/,,*/,/g; s/,$//')
+  fi
   [ -z "$f" ] && return 1
   IFS=, read -r l t r b <<< "$f"
   echo "$(( (l + r) / 2 )) $(( (t + b) / 2 ))"
