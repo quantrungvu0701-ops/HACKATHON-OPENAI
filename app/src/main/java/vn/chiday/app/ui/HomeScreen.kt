@@ -234,6 +234,31 @@ fun HomeScreen(
             Text(stringResource(R.string.home_start), fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
         }
 
+        // The way to take the bubble off the screen without switching the permission off.
+        val bubbleOn by GuideService.bubbleOn.collectAsState()
+        androidx.compose.runtime.LaunchedEffect(resumeTick) { GuideService.refreshBubbleSwitch(context) }
+        if (serviceState == CheckState.OK) {
+            androidx.compose.material3.OutlinedButton(
+                onClick = { GuideService.setBubbleOn(context, !bubbleOn) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("btn_bubble_switch"),
+                shape = RoundedCornerShape(20.dp),
+            ) {
+                Text(
+                    stringResource(if (bubbleOn) R.string.home_bubble_off else R.string.home_bubble_on),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Ink,
+                )
+            }
+            Text(
+                stringResource(if (bubbleOn) R.string.home_bubble_on_hint else R.string.home_bubble_off_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = InkSoft,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
         Text(
             stringResource(
                 when {

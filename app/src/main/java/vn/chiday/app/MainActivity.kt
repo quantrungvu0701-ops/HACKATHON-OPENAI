@@ -53,7 +53,11 @@ class MainActivity : ComponentActivity() {
                         onOpenVoiceSettings = ::openVoiceSettings,
                         onOpenDocCheck = { screen = SCREEN_DOCCHECK },
                         onOpenImport = { screen = SCREEN_IMPORT },
-                        onStart = { moveTaskToBack(true) },
+                        onStart = {
+                            // "Bắt đầu" always brings the bubble back if it was switched off.
+                            GuideService.setBubbleOn(this, true)
+                            moveTaskToBack(true)
+                        },
                     )
                 }
             }

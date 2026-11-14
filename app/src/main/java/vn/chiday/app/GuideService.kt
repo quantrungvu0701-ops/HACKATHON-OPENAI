@@ -119,9 +119,29 @@ class GuideService : AccessibilityService() {
         // Order matters: the highlight window is added first so the bubble stays on top of it.
         highlight = HighlightWindow(this).also { it.attach() }
         speaker = Speaker(this)
-        bubble = BubbleWindow(this, ::onBubbleTap).also { it.show() }
+        bubble = BubbleWindow(this, ::onBubbleTap, ::onBubbleHold)
+        applyBubbleSwitch()
         _running.value = true
-        Log.i(TAG, "service connected, bubble shown")
+        Log.i(TAG, "service connected, bubble ${if (_bubbleOn.value) "shown" else "off"}")
+    }
+
+    /** Press and hold on the bubble: switch it off and say how to get it back. */
+    private fun onBubbleHold() {
+        Log.i(TAG, "bubble held: switched off")
+        setBubbleOn(this, false)
+        speaker?.speak(getString(R.string.bubble_off_spoken))
+    }
+
+    /** Shows or hides the bubble to match the saved switch. Hiding also ends a running session. */
+    private fun applyBubbleSwitch() {
+        val on = bubblePrefs(this).getBoolean(KEY_BUBBLE_ON, true)
+        _bubbleOn.value = on
+        if (on) {
+            bubble?.show()
+        } else {
+            if (sessionActive) endSession()
+            bubble?.hide()
+        }
     }
 
     private fun onBubbleTap() {
@@ -532,6 +552,29 @@ class GuideService : AccessibilityService() {
          * read: after a kill-and-reopen the activity can be on screen before the system rebinds.
          */
         val running: StateFlow<Boolean> = _running
+
+        private const val KEY_BUBBLE_ON = "enabled"
+        private val _bubbleOn = MutableStateFlow(true)
+
+        /** Whether the floating bubble is switched on (saved; survives kill-and-reopen). */
+        val bubbleOn: StateFlow<Boolean> = _bubbleOn
+
+        private fun bubblePrefs(context: Context) = context.getSharedPreferences("bubble", Context.MODE_PRIVATE)
+
+        /** Reads the saved switch into [bubbleOn]; call when the activity comes to the front. */
+        fun refreshBubbleSwitch(context: Context) {
+            _bubbleOn.value = bubblePrefs(context).getBoolean(KEY_BUBBLE_ON, true)
+        }
+
+        /**
+         * The user's switch for the floating bubble. Off removes the bubble from every screen and
+         * ends any session, without touching the accessibility permission; on brings it back.
+         */
+        fun setBubbleOn(context: Context, on: Boolean) {
+            bubblePrefs(context).edit().putBoolean(KEY_BUBBLE_ON, on).apply()
+            _bubbleOn.value = on
+            instance?.applyBubbleSwitch()
+        }
 
         /** True when the user has switched the service on in Settings. */
         fun isEnabledInSettings(context: Context): Boolean {

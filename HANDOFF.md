@@ -56,3 +56,4 @@ before every push.
 ## Done since this file was first written
 
 (append one line per finished item)
+- Bubble on/off: hold the bubble 0.7 s or press «Tắt nút nổi» on Home to hide it; «Bắt đầu» / «Bật lại nút nổi» shows it again. Saved in SharedPreferences, checked on the emulator.

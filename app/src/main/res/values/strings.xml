@@ -17,6 +17,11 @@
     <string name="check_service_off">Chưa bật. Bấm để mở Cài đặt trợ năng.</string>
     <string name="home_open_accessibility">Mở Cài đặt trợ năng</string>
     <string name="home_start">Bắt đầu</string>
+    <string name="home_bubble_off">Tắt nút nổi</string>
+    <string name="home_bubble_on">Bật lại nút nổi</string>
+    <string name="home_bubble_on_hint">Muốn cất nút tròn đi: bấm «Tắt nút nổi», hoặc nhấn giữ nút tròn một lúc.</string>
+    <string name="home_bubble_off_hint">Nút tròn đang tắt. Bấm «Bắt đầu» hoặc «Bật lại nút nổi» để hiện lại.</string>
+    <string name="bubble_off_spoken">Đã tắt nút. Khi cần, bác mở Chỉ Đây rồi bấm Bắt đầu.</string>
     <string name="home_start_hint">Mở ứng dụng bác cần làm. Khi bí, bấm nút tròn vòng vàng nổi trên màn hình.</string>
     <string name="home_not_ready">Bác cần bật quyền trợ năng trước.</string>
     <string name="restricted_title">Nếu công tắc bị mờ, không bật được</string>

@@ -23,6 +23,7 @@ import kotlin.math.abs
 class BubbleWindow(
     private val service: AccessibilityService,
     private val onTap: () -> Unit,
+    private val onLongPress: () -> Unit = {},
 ) {
     enum class State { IDLE, THINKING, ACTIVE }
 
@@ -125,6 +126,13 @@ class BubbleWindow(
         var startX = 0
         var startY = 0
         var dragging = false
+        var longPressed = false
+        // Press and hold (no drag) switches the bubble off: the way out without opening Settings.
+        val hold = Runnable {
+            longPressed = true
+            view.pressedDown = false
+            onLongPress()
+        }
 
         view.setOnTouchListener { _, e ->
             when (e.actionMasked) {
@@ -134,15 +142,20 @@ class BubbleWindow(
                     startX = lp.x
                     startY = lp.y
                     dragging = false
+                    longPressed = false
                     view.pressedDown = true
+                    view.postDelayed(hold, HOLD_MS)
                     true
                 }
 
                 MotionEvent.ACTION_MOVE -> {
                     val dx = e.rawX - downRawX
                     val dy = e.rawY - downRawY
-                    if (!dragging && (abs(dx) > slop || abs(dy) > slop)) dragging = true
-                    if (dragging) {
+                    if (!dragging && (abs(dx) > slop || abs(dy) > slop)) {
+                        dragging = true
+                        view.removeCallbacks(hold)
+                    }
+                    if (dragging && !longPressed) {
                         lp.x = startX + dx.toInt()
                         lp.y = startY + dy.toInt()
                         clamp()
@@ -152,8 +165,11 @@ class BubbleWindow(
                 }
 
                 MotionEvent.ACTION_UP -> {
+                    view.removeCallbacks(hold)
                     view.pressedDown = false
-                    if (dragging) {
+                    if (longPressed) {
+                        // already handled: the bubble is gone
+                    } else if (dragging) {
                         snapToEdge()
                     } else {
                         onTap()
@@ -162,6 +178,7 @@ class BubbleWindow(
                 }
 
                 MotionEvent.ACTION_CANCEL -> {
+                    view.removeCallbacks(hold)
                     view.pressedDown = false
                     true
                 }
@@ -169,6 +186,10 @@ class BubbleWindow(
                 else -> false
             }
         }
+    }
+
+    private companion object {
+        const val HOLD_MS = 700L
     }
 
     private fun snapToEdge() {
