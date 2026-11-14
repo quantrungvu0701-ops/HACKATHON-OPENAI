@@ -3,6 +3,7 @@ package vn.chiday.app
 import android.accessibilityservice.AccessibilityService
 import android.content.ComponentName
 import android.content.Context
+import android.graphics.Rect
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
@@ -20,6 +21,7 @@ import kotlinx.serialization.json.Json
 import vn.chiday.app.guide.GuideEngine
 import vn.chiday.app.guide.GuideResult
 import vn.chiday.app.guide.Speaker
+import vn.chiday.app.guide.TargetResolver
 import vn.chiday.app.overlay.BubbleWindow
 import vn.chiday.app.overlay.HighlightWindow
 import vn.chiday.app.playbook.PlaybookStore
@@ -56,6 +58,47 @@ class GuideService : AccessibilityService() {
 
     /** The node currently ringed, so the ring can follow a scroll and we can tell when it is gone. */
     private var shown: UiNode? = null
+
+    /** Where the ring is, and in which app: taps are compared against it (tap feedback). */
+    private var shownRect: Rect? = null
+    private var shownPkg: String? = null
+    private var shownOnWeb = false
+
+    /** The card that goes with the ring, so a feedback line can be added without losing it. */
+    private var card: Card? = null
+
+    private class Card(
+        val title: String,
+        val body: String?,
+        val footer: String?,
+        val caution: Boolean,
+        val step: Int?,
+        val total: Int?,
+        val mark: String?,
+    )
+
+    /** Ring plus card: progress segments, the button name marked, the caution band when needed. */
+    private fun showCard(ring: Rect, c: Card, body: String?) {
+        highlight?.showTarget(
+            target = ring,
+            title = c.title,
+            body = body,
+            footer = c.footer,
+            caution = c.caution,
+            step = c.step,
+            total = c.total,
+            mark = c.mark,
+            cautionNote = getString(R.string.guide_caution),
+        )
+    }
+
+    /** A "move the screen first" instruction is up (no ring): re-place the target after each scroll. */
+    private var moving = false
+
+    /** Each feedback sentence is said at most once per step. */
+    private var missSaid = false
+    private var stuckSaid = false
+    private var stuckCheck: Job? = null
 
     /** Hash of the last screen sent to the model: an unchanged screen is never analysed twice. */
     private var analysedHash: Int? = null
@@ -114,9 +157,15 @@ class GuideService : AccessibilityService() {
             val started = SystemClock.elapsedRealtime()
             val result = engine.decide(snap)
             Log.i(TAG, "decision (auto=$auto) in ${SystemClock.elapsedRealtime() - started} ms: $result")
-            autoMisses = if (result is GuideResult.Show || !auto) 0 else autoMisses + 1
+            autoMisses = if (result is GuideResult.Show || result is GuideResult.Move || !auto) 0 else autoMisses + 1
+            if (result is GuideResult.Show || result is GuideResult.Move) {
+                missSaid = false
+                stuckSaid = false
+                stuckCheck?.cancel()
+            }
             when (result) {
                 is GuideResult.Show -> show(result, snap)
+                is GuideResult.Move -> showMove(result)
                 // In follow mode an unsure answer is shown quietly: the user did not ask just now.
                 is GuideResult.NotSure -> if (auto && autoMisses == 1) {
                     // First automatic miss is usually a page that is still loading: stay silent
@@ -136,7 +185,11 @@ class GuideService : AccessibilityService() {
     }
 
     private fun show(result: GuideResult.Show, snap: ScreenSnapshot) {
-        val reply = result.reply
+        var reply = result.reply
+        // A "look" target is ringed to be read, not pressed: never let "bấm" through.
+        if (result.look && PRESS.containsMatchIn(listOfNotNull(reply.say, reply.subtitle).joinToString(" "))) {
+            reply = reply.copy(say = getString(R.string.guide_look), subtitle = null)
+        }
         val say = reply.say?.trim().orEmpty()
         val title = reply.subtitle?.trim()?.takeIf { it.isNotEmpty() } ?: say
         val step = reply.step
@@ -147,18 +200,16 @@ class GuideService : AccessibilityService() {
         val body = say.takeIf { it.isNotEmpty() && it != title }
 
         val node = snap.nodes[result.targetIndex]
+        moving = false
         shown = node
-        highlight?.showTarget(
-            target = result.rect,
-            title = title,
-            body = body,
-            footer = footer,
-            caution = reply.caution,
-            step = step,
-            total = total,
-            mark = node.text ?: node.desc,
-            cautionNote = getString(R.string.guide_caution),
-        )
+        shownRect = Rect(result.rect)
+        shownPkg = snap.pkg
+        shownOnWeb = snap.host != null
+        val c = Card(title, body, footer, reply.caution, step, total, node.text ?: node.desc)
+        card = c
+        showCard(result.rect, c, body)
+        // The bubble must not sit on the element the user is told to press.
+        bubble?.avoid(result.rect)
         bubble?.state = BubbleWindow.State.ACTIVE
 
         // Spoken text: the full sentence, plus the warning before payment / submit / delete.
@@ -167,11 +218,97 @@ class GuideService : AccessibilityService() {
             speaker?.speak(spoken)
             lastSpoken = spoken
         }
-        Log.i(TAG, "ring on node ${result.targetIndex} at ${result.rect.toShortString()} caution=${reply.caution} verified=${result.verified}")
+        Log.i(TAG, "ring on node ${result.targetIndex} at ${result.rect.toShortString()} caution=${reply.caution} verified=${result.verified} look=${result.look}")
+    }
+
+    /** No ring: tell the user to move the screen. The target is re-placed after each scroll. */
+    private fun showMove(result: GuideResult.Move) {
+        val reply = result.reply
+        val below = result.towards == TargetResolver.Towards.BELOW
+        val direction = getString(if (below) R.string.guide_move_below else R.string.guide_move_above)
+        val title: String
+        val say: String
+        if (result.nudge) {
+            // Our own words: the model's sentence says "bấm", and there is nothing to press yet.
+            title = direction
+            say = getString(if (below) R.string.guide_nudge_below else R.string.guide_nudge_above)
+        } else {
+            val modelSay = reply.say?.trim().orEmpty()
+            say = modelSay.takeIf { it.isNotEmpty() && !PRESS.containsMatchIn(it) } ?: direction
+            title = reply.subtitle?.trim()?.takeIf { it.isNotEmpty() && !PRESS.containsMatchIn(it) } ?: direction
+        }
+        val step = reply.step
+        val total = reply.totalSteps
+        val stepLabel = if (step != null && total != null && step in 1..total) getString(R.string.guide_step, step, total) else null
+        val footer = listOfNotNull(stepLabel, getString(R.string.guide_unverified).takeIf { !result.verified })
+            .joinToString(" · ").takeIf { it.isNotEmpty() }
+
+        moving = true
+        shown = null
+        shownRect = null
+        card = null
+        highlight?.showMove(below, title, say.takeIf { it != title }, footer)
+        bubble?.restore()
+        bubble?.state = BubbleWindow.State.ACTIVE
+        if (say != lastSpoken) {
+            speaker?.speak(say)
+            lastSpoken = say
+        }
+        Log.i(TAG, "move towards=${result.towards} nudge=${result.nudge} anchor=${result.anchor?.toShortString()}")
+    }
+
+    /**
+     * Tap feedback. A click event from the guided app while a ring is up: outside the ring the
+     * user missed; inside it, the screen should change soon. Each sentence is said once per
+     * step. No event (Chrome does not send one for every web element) means silence: no guessing.
+     */
+    private fun onViewClicked(event: AccessibilityEvent) {
+        val ring = shownRect ?: return
+        val target = shown ?: return
+        if (event.packageName?.toString() != shownPkg) return
+        val source = event.source ?: return
+        val r = Rect()
+        source.getBoundsInScreen(r)
+        if (r.isEmpty) return
+        val hit = r.contains(ring.centerX(), ring.centerY()) || ring.contains(r.centerX(), r.centerY())
+        // A click reported by a big container around the ring says nothing about where the finger was.
+        if (hit && r.width().toLong() * r.height() > 4L * ring.width() * ring.height()) return
+        Log.i(TAG, "click at ${r.toShortString()} ring ${ring.toShortString()} hit=$hit")
+        if (!hit) {
+            if (!missSaid) {
+                missSaid = true
+                feedback(getString(R.string.guide_miss))
+            }
+            return
+        }
+        // Fields and toggles change in place; only buttons and links are expected to move on.
+        if (stuckSaid || target.role !in MOVES_ON) return
+        val hashAtTap = analysedHash
+        stuckCheck?.cancel()
+        stuckCheck = scope.launch {
+            delay(if (shownOnWeb) STUCK_WEB_MS else STUCK_MS)
+            if (!sessionActive || shown?.let { GuideEngine.sameElement(it, target) } != true || analysedHash != hashAtTap) return@launch
+            val now = ScreenReader.read(this@GuideService) ?: return@launch
+            if (now.hash != hashAtTap) return@launch
+            stuckSaid = true
+            feedback(getString(R.string.guide_stuck))
+        }
+    }
+
+    /** Says one feedback sentence and shows it on the card, keeping the ring where it is. */
+    private fun feedback(text: String) {
+        val ring = shownRect ?: return
+        val c = card ?: return
+        showCard(ring, c, text)
+        speaker?.speak(text)
+        Log.i(TAG, "feedback: $text")
     }
 
     private fun showMessage(title: String, body: String?, speak: Boolean) {
         shown = null
+        shownRect = null
+        card = null
+        moving = false
         highlight?.showMessage(title, body)
         bubble?.state = if (sessionActive) BubbleWindow.State.ACTIVE else BubbleWindow.State.IDLE
         if (speak) {
@@ -192,7 +329,14 @@ class GuideService : AccessibilityService() {
         settle?.cancel()
         messageTimeout?.cancel()
         idleTimeout?.cancel()
+        stuckCheck?.cancel()
         shown = null
+        shownRect = null
+        card = null
+        moving = false
+        missSaid = false
+        stuckSaid = false
+        bubble?.restore()
         analysedHash = null
         lastSpoken = null
         autoMisses = 0
@@ -217,6 +361,10 @@ class GuideService : AccessibilityService() {
         // Events are only acted on inside a session; nothing is read outside one.
         if (!sessionActive || event == null) return
         if (event.packageName == packageName) return
+        if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            onViewClicked(event)
+            return
+        }
 
         // Debounce: wait for SETTLE_MS of quiet, but never longer than MAX_SETTLE_MS in total,
         // because pages with carousels or clocks never go quiet.
@@ -246,6 +394,24 @@ class GuideService : AccessibilityService() {
         if (!sessionActive) return
         val snap = ScreenReader.read(this) ?: return
 
+        if (moving) {
+            // The user was asked to move the screen: see where the target is now, without the model.
+            when (val again = engine.recheck(snap)) {
+                is GuideResult.Show -> {
+                    Log.i(TAG, "target in reach after the scroll: ring without a model call")
+                    analysedHash = snap.hash
+                    show(again, snap)
+                    return
+                }
+                is GuideResult.Move -> {
+                    analysedHash = snap.hash
+                    showMove(again)
+                    return
+                }
+                else -> {} // no remembered target (plain scroll step) or it is gone: analyse below
+            }
+        }
+
         val was = shown
         if (was != null) {
             val oldTop = was.bounds[1]
@@ -253,11 +419,13 @@ class GuideService : AccessibilityService() {
                 // Same element = same role and labels. The hint counts too: two empty text
                 // fields differ only by it, and a field the user typed into no longer matches,
                 // which is what moves the guide on to the next step.
-                .filter { (_, n) -> n.role == was.role && n.text == was.text && n.desc == was.desc && n.id == was.id && n.hint == was.hint }
+                .filter { (_, n) -> GuideEngine.sameElement(n, was) }
                 .minByOrNull { (_, n) -> abs(n.bounds[1] - oldTop) }
             if (match != null) {
                 shown = match.value
+                shownRect = Rect(snap.rects[match.index])
                 highlight?.moveTarget(snap.rects[match.index])
+                bubble?.avoid(snap.rects[match.index])
                 return
             }
             if (trackingPass) {
@@ -266,6 +434,8 @@ class GuideService : AccessibilityService() {
                 // before spending a model call on it. With the ring down, later events use
                 // the capped debounce, so a page that never goes quiet cannot postpone this.
                 shown = null
+                shownRect = null
+                stuckCheck?.cancel()
                 highlight?.hide()
                 firstPendingEventAt = SystemClock.elapsedRealtime()
                 settle?.cancel()
@@ -294,7 +464,10 @@ class GuideService : AccessibilityService() {
         }
         Log.i(TAG, "screen moved on: analysing again (follow mode)")
         shown = null
-        highlight?.hide()
+        shownRect = null
+        stuckCheck?.cancel()
+        // A "move the screen" card stays up while the next answer is fetched: no flicker.
+        if (!moving) highlight?.hide()
         analyse(auto = true, preRead = snap)
     }
 
@@ -342,6 +515,10 @@ class GuideService : AccessibilityService() {
         private const val MIN_AUTO_INTERVAL_MS = 1500L
         private const val MESSAGE_MS = 7000L
         private const val IDLE_SESSION_MS = 5 * 60 * 1000L
+        private const val STUCK_MS = 4000L
+        private const val STUCK_WEB_MS = 8000L
+        private val MOVES_ON = setOf("button", "link", "item")
+        private val PRESS = Regex("(?i)(?<![\\p{L}])(bấm|nhấn|chạm|ấn)(?![\\p{L}])")
         private val NODE_JSON = Json { explicitNulls = false }
 
         @Volatile

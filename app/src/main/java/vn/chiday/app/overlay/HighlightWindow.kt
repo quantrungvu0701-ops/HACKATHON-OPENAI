@@ -91,14 +91,28 @@ class HighlightWindow(private val service: AccessibilityService) {
         cautionNote: String? = null,
     ) {
         view.target = Rect(target)
+        view.moveDir = 0
         view.caution = caution
         view.setCard(title, body, footer, step, total, mark, cautionNote.takeIf { caution })
+        reveal()
+    }
+
+    /**
+     * No ring: the user has to move the screen first. Chevrons point to where the content is,
+     * down when [below] (more further down the page), up otherwise. The screen is not dimmed.
+     */
+    fun showMove(below: Boolean, title: String, body: String?, footer: String?) {
+        view.target = null
+        view.moveDir = if (below) 1 else -1
+        view.caution = false
+        view.setCard(title, body, footer, null, null, null, null)
         reveal()
     }
 
     /** Card only, no ring: "not sure", errors. */
     fun showMessage(title: String, body: String? = null) {
         view.target = null
+        view.moveDir = 0
         view.caution = false
         view.setCard(title, body, null, null, null, null, null)
         reveal()
@@ -113,6 +127,7 @@ class HighlightWindow(private val service: AccessibilityService) {
 
     fun hide() {
         view.target = null
+        view.moveDir = 0
         if (attached) view.visibility = View.GONE
     }
 
@@ -128,6 +143,9 @@ class HighlightWindow(private val service: AccessibilityService) {
 
         var target: Rect? = null
         var caution = false
+
+        /** 0 = none, 1 = "more below" chevrons at the bottom, -1 = "more above" at the top. */
+        var moveDir = 0
 
         private var title: String = ""
         private var body: String? = null
@@ -148,6 +166,9 @@ class HighlightWindow(private val service: AccessibilityService) {
         private val arrow = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val arrowEdge = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE; color = INK; strokeWidth = 2.5f * d; strokeJoin = Paint.Join.ROUND
+        }
+        private val chevron = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND
         }
         private val cardFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() }
         private val cardEdge = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 3f * d }
@@ -269,8 +290,33 @@ class HighlightWindow(private val service: AccessibilityService) {
                 if (hole.width() < SMALL_DP * d || hole.height() < SMALL_DP * d) drawArrow(canvas, accent, phase)
             }
 
+            if (t == null && moveDir != 0) drawMoveHint(canvas, accent)
             drawCard(canvas, accent)
-            if (t != null) postInvalidateOnAnimation()
+            if (t != null || moveDir != 0) postInvalidateOnAnimation()
+        }
+
+        /** Three bobbing chevrons at the edge the content is beyond. */
+        private fun drawMoveHint(canvas: Canvas, accent: Int) {
+            val phase = (SystemClock.uptimeMillis() % PULSE_MS) / PULSE_MS.toFloat()
+            val bob = (sin(phase * 2 * Math.PI).toFloat() + 1f) * 7f * d * moveDir
+            val cx = width / 2f
+            val half = 46f * d
+            val drop = 30f * d * moveDir
+            val gap = 28f * d * moveDir
+            val base = if (moveDir > 0) height - 250f * d else 150f * d
+            path.reset()
+            for (k in 0..2) {
+                val y = base + k * gap + bob
+                path.moveTo(cx - half, y)
+                path.lineTo(cx, y + drop)
+                path.lineTo(cx + half, y)
+            }
+            chevron.color = INK // dark edge so the yellow chevron reads on white pages
+            chevron.strokeWidth = 15f * d
+            canvas.drawPath(path, chevron)
+            chevron.color = accent
+            chevron.strokeWidth = 9f * d
+            canvas.drawPath(path, chevron)
         }
 
         /** An arrow pointing at a small target from the direction of the screen centre. */
@@ -330,7 +376,7 @@ class HighlightWindow(private val service: AccessibilityService) {
             // Keep the card away from the target: bottom of the screen unless the target is there.
             val t = target
             val targetCentreY = if (t != null) (t.centerY() - origin[1]).toFloat() else 0f
-            val atBottom = t == null || targetCentreY < height * 0.55f
+            val atBottom = if (moveDir != 0) moveDir < 0 else t == null || targetCentreY < height * 0.55f
             val top = if (atBottom) height - cardH - 72f * d else 56f * d
             cardRect.set(margin, top, width - margin, top + cardH)
 

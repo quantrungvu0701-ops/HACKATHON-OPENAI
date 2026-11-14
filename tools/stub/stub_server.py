@@ -19,7 +19,8 @@ Three kinds of request are recognised from the user message:
       # rules: "text on screen ~ target"; the first rule whose text is on screen wins
 
 When the app sends a PLAYBOOK the stub ignores the pick rules and follows the playbook's
-LIKELY_STEP and target_hint, like a model that obeys the playbook.
+LIKELY_STEP and target_hint, like a model that obeys the playbook. Add "&playbook=0" to a
+/pick call to make it use the pick rules even then.
 
 From the emulator the host machine is http://10.0.2.2:8787 .
 """
@@ -33,7 +34,7 @@ import unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-STATE = {"pick": "", "caution": False, "step": 0, "delay": 0.0}
+STATE = {"pick": "", "caution": False, "step": 0, "delay": 0.0, "playbook": True}
 NL = chr(10)
 # Press/type verbs: a "Kéo ..." step that also contains one of these is a tap step.
 PRESS_WORDS = {"bấm", "nhấn", "chạm", "ấn", "gõ", "chọn"}
@@ -92,7 +93,7 @@ def guide_reply(text):
     scroll_do, scroll_up = None, False
 
     playbook = field(text, "PLAYBOOK")
-    if playbook and playbook != "none":
+    if playbook and playbook != "none" and STATE["playbook"]:
         # Behave like a model that follows the playbook: take the hinted step, find its target.
         pb = json.loads(playbook)
         total = len(pb.get("steps", []))
@@ -220,6 +221,8 @@ class Handler(BaseHTTPRequestHandler):
             STATE["caution"] = q.get("caution", ["0"])[0] == "1"
             STATE["delay"] = float(q.get("delay", ["0"])[0])
             STATE["step"] = 0
+            # playbook=0: ignore the PLAYBOOK the app sends and use the pick rules (generic mode tests).
+            STATE["playbook"] = q.get("playbook", ["1"])[0] != "0"
         self._send(200, STATE)
 
     def do_POST(self):

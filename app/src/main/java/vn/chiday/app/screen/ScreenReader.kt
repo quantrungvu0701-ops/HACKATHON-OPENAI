@@ -37,6 +37,8 @@ class ScreenSnapshot(
     val nodes: List<UiNode>,
     val rects: List<Rect>,
     val screen: Rect,
+    /** Bounds as the tree reports them, not clipped to the screen: tells a cut-off element from a whole one. */
+    val fullRects: List<Rect> = rects,
 ) {
     /** Layout-independent fingerprint used to skip re-analysing an unchanged screen. */
     val hash: Int by lazy {
@@ -87,7 +89,7 @@ object ScreenReader {
             !walker.sawUrlBar && last != null && last.first == pkg -> last.second
             else -> null
         }
-        return ScreenSnapshot(pkg, host, walker.nodes, walker.rects, Rect(screen))
+        return ScreenSnapshot(pkg, host, walker.nodes, walker.rects, Rect(screen), walker.fullRects)
     }
 
     /** (browser package, host) from the last read that showed the browser's address bar. */
@@ -122,6 +124,7 @@ object ScreenReader {
     private class Walker(private val screen: Rect) {
         val nodes = ArrayList<UiNode>()
         val rects = ArrayList<Rect>()
+        val fullRects = ArrayList<Rect>()
         var host: String? = null
         var sawUrlBar = false
         private var visited = 0
@@ -180,6 +183,20 @@ object ScreenReader {
                 (ancestorLabel == null || !ancestorLabel.contains(label.removeSuffix("…")))
             val keep = onScreen && (clickable || editable || plainTextWorthKeeping)
             if (keep) {
+                // Native views report bounds already clipped by their scrolling parent, so a row
+                // half under the screen edge looks like a short, whole row. Its real height is
+                // in getBoundsInParent: grow the rect back on the side that is cut. Web content
+                // is left alone (Chrome reports page bounds unclipped).
+                val full = Rect(r)
+                if (!inWeb) {
+                    val own = Rect()
+                    @Suppress("DEPRECATION")
+                    node.getBoundsInParent(own)
+                    if (own.height() > r.height() + 2) {
+                        if (r.centerY() >= screen.centerY()) full.bottom = full.top + own.height() else full.top = full.bottom - own.height()
+                    }
+                }
+                fullRects += full
                 r.intersect(screen)
                 nodes += UiNode(
                     i = nodes.size,
