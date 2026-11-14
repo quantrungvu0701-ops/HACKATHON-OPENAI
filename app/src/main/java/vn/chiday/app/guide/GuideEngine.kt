@@ -136,7 +136,16 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         Log.i(TAG, "playbook=${playbook?.id ?: "none"} likelyStep=${likely?.n ?: "-"}")
 
         val raw = try {
-            Llm.clientFor(s).complete(SYSTEM_PROMPT, userMessage(snapshot, playbook, likely))
+            // A guide answer normally takes 1-4 s. A call that stalls must not leave the user
+            // waiting in silence: give up after CALL_TIMEOUT_MS and try once more.
+            val message = userMessage(snapshot, playbook, likely)
+            val client = Llm.clientFor(s)
+            kotlinx.coroutines.withTimeoutOrNull(CALL_TIMEOUT_MS) { client.complete(SYSTEM_PROMPT, message) }
+                ?: run {
+                    Log.w(TAG, "model call took over ${CALL_TIMEOUT_MS / 1000}s: trying once more")
+                    kotlinx.coroutines.withTimeoutOrNull(CALL_TIMEOUT_MS) { client.complete(SYSTEM_PROMPT, message) }
+                }
+                ?: return GuideResult.Failed("model call timed out twice")
         } catch (e: CancellationException) {
             throw e
         } catch (e: LlmException) {
@@ -203,6 +212,7 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
     companion object {
         private const val TAG = "ChiDay"
         const val MIN_CONFIDENCE = 0.5
+        const val CALL_TIMEOUT_MS = 10_000L
 
         // Prompt contract from AGENTS.md. English instructions, Vietnamese output.
         const val SYSTEM_PROMPT =
