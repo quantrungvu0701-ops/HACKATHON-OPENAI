@@ -330,3 +330,17 @@ Order of work when the phone and the host's key arrive:
   chevrons, whether Chrome sends click events for web elements, the "trang chưa đổi" line.
   Not done: real model call, CapCut, record mode, screenshot fallback, default bubble position
   covering buttons on Home/Settings, `PHONE_CHECKLIST.md` phone line.
+- **First real model calls (2026-11-14, emulator, OpenAI `gpt-4.1`, base URL
+  `https://api.openai.com/v1`).** Key entered in the app only (DataStore), never in the repo; it
+  expires 2026-11-15 04:15 UTC, so get a fresh one for the demo. "Kiểm tra kết nối": 1309 ms.
+  Home shows three green checks. vnpost.vn, one bubble tap: `vnpost-theo-doi-buu-gui` step 1
+  ringed «Nhập mã bưu gửi» in 2624 ms; with the goal «Tìm bưu cục gần nhà», step 1 ringed
+  «Tìm Bưu Cục» in 1478 ms and follow mode moved to step 2 (ring under «Tỉnh/Thành phố») in
+  2136 ms with no second tap. Steps 3-4 need a province picked by hand: pending on the phone.
+  Valid JSON every time, no parse failures. Model timing on a small guide prompt: gpt-4.1 1.1 s,
+  gpt-5.4-mini 1.0 s, gpt-4.1-mini 2.1 s, gpt-5.5 2.3 s (gpt-5.5 once returned a label instead
+  of an index for `target`: the validator would reject it). DocCheck with gpt-4.1: blurred
+  sample rejected for blur (1.8 s); the sharp sample is ALSO rejected because the model sees it
+  is a generated mock card, so the demo needs a photo of a real card (numbers covered).
+  Gotcha: `adb shell uiautomator dump` hung the accessibility service again; toggling
+  `enabled_accessibility_services` brought the bubble back.
