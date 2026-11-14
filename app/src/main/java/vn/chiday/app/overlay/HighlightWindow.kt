@@ -121,21 +121,21 @@ class HighlightWindow(private val service: AccessibilityService) {
         private var footerLayout: StaticLayout? = null
         private var layoutWidth = 0
 
-        private val dim = Paint().apply { color = 0x73000000 }
+        private val dim = Paint().apply { color = 0x8C0D1322.toInt() }
         private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-        private val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = 0xFFFFFFFF.toInt() }
+        private val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
         private val arrow = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val arrowEdge = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE; color = 0xFFFFFFFF.toInt(); strokeWidth = 2f * d; strokeJoin = Paint.Join.ROUND
+            style = Paint.Style.STROKE; color = INK; strokeWidth = 2.5f * d; strokeJoin = Paint.Join.ROUND
         }
-        private val cardFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFDF8.toInt() }
+        private val cardFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() }
         private val cardEdge = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 3f * d }
         private val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFF2B2118.toInt(); textSize = 24f * sp; typeface = Typeface.DEFAULT_BOLD
+            color = INK; textSize = 24f * sp; typeface = Typeface.DEFAULT_BOLD
         }
-        private val bodyPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF2B2118.toInt(); textSize = 19f * sp }
+        private val bodyPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = INK; textSize = 19f * sp }
         private val footerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0xFF6B5B4D.toInt(); textSize = 15f * sp; typeface = Typeface.DEFAULT_BOLD
+            color = INK_SOFT; textSize = 15f * sp; typeface = Typeface.DEFAULT_BOLD
         }
 
         private val origin = IntArray(2)
@@ -169,7 +169,7 @@ class HighlightWindow(private val service: AccessibilityService) {
         override fun onDraw(canvas: Canvas) {
             // getBoundsInScreen is in absolute screen pixels; convert to this view's coordinates.
             getLocationOnScreen(origin)
-            val accent = if (caution) AMBER else BRAND
+            val accent = if (caution) CAUTION else HIGHLIGHT
             val t = target
 
             if (t != null) {
@@ -184,8 +184,10 @@ class HighlightWindow(private val service: AccessibilityService) {
                 path.addRoundRect(hole, radius, radius, Path.Direction.CW)
                 canvas.drawPath(path, dim)
 
-                // Solid ring with a white halo so it reads on any background.
-                halo.strokeWidth = 9f * d
+                // Highlighter ring over a dark edge (ink, or stamp red on caution) so it reads on
+                // white web pages and on dark apps alike.
+                halo.color = if (caution) STAMP else INK
+                halo.strokeWidth = 10f * d
                 canvas.drawRoundRect(hole, radius, radius, halo)
                 ring.color = accent
                 ring.alpha = 255
@@ -266,7 +268,7 @@ class HighlightWindow(private val service: AccessibilityService) {
 
             val r = 22f * d
             canvas.drawRoundRect(cardRect, r, r, cardFill)
-            cardEdge.color = accent
+            cardEdge.color = if (caution) STAMP else INK
             canvas.drawRoundRect(cardRect, r, r, cardEdge)
 
             canvas.save()
@@ -282,8 +284,11 @@ class HighlightWindow(private val service: AccessibilityService) {
         }
 
         private companion object {
-            const val BRAND = 0xFFFF5A1F.toInt()
-            const val AMBER = 0xFFFFB300.toInt()
+            const val HIGHLIGHT = 0xFFFFD43B.toInt()
+            const val CAUTION = 0xFFFF8A8A.toInt()
+            const val STAMP = 0xFFC8102E.toInt()
+            const val INK = 0xFF16223B.toInt()
+            const val INK_SOFT = 0xFF5D6880.toInt()
             const val PULSE_MS = 1400L
             const val SMALL_DP = 72f
         }

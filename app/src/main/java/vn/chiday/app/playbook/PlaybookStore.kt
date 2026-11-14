@@ -71,12 +71,41 @@ class PlaybookStore(context: Context) {
         if (wanted.isNotEmpty()) {
             candidates.firstOrNull { it.goal.lowercase() == wanted }?.let { return it }
             candidates.firstOrNull { it.goal.lowercase().contains(wanted) || wanted.contains(it.goal.lowercase()) }?.let { return it }
+            matchGoal(wanted, candidates)?.let { return it }
         }
         return candidates.firstOrNull { it.likelyStep(snapshot) != null }
     }
 
     companion object {
         private const val TAG = "ChiDay"
+
+        // Words that say nothing about which task it is ("tôi muốn xem cần gì cho cháu").
+        private val FILLER = setOf(
+            "tôi", "muốn", "cần", "xem", "gì", "để", "cho", "của", "và", "với", "được", "làm",
+            "bác", "cháu", "con", "em", "anh", "chị", "ơi", "nhé", "ạ", "à", "thế", "nào", "sao", "đi",
+        )
+
+        private fun words(text: String): List<String> =
+            text.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotBlank() }
+
+        /**
+         * The playbook whose goal best matches what the user said in their own words, e.g.
+         * "xin bản sao giấy khai sinh cho cháu" finds "Xem cần giấy tờ gì để xin bản sao Giấy
+         * khai sinh". Needs at least two shared content words covering 40% of the goal.
+         */
+        fun matchGoal(said: String, playbooks: List<Playbook>): Playbook? {
+            val heard = words(said).toSet()
+            if (heard.isEmpty()) return null
+            val lower = said.trim().lowercase()
+            playbooks.firstOrNull { it.goal.lowercase() == lower }?.let { return it }
+            return playbooks.mapNotNull { pb ->
+                val goalWords = words(pb.goal).filter { it !in FILLER }.toSet()
+                if (goalWords.isEmpty()) return@mapNotNull null
+                val shared = goalWords.count { it in heard }
+                val ratio = shared.toFloat() / goalWords.size
+                if (shared >= 2 && ratio >= 0.4f) pb to ratio else null
+            }.maxByOrNull { it.second }?.first
+        }
 
         /** Shared by the activity and the service (same process): a save in one is seen by the other. */
         @Volatile

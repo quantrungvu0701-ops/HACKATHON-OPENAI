@@ -1,0 +1,246 @@
+<title>Chỉ Đây Home Redesign</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap">
+<style>
+/* Layout: short intro, then the five screens of one session as a left-to-right strip; each phone has its note directly under it. */
+:root{
+  /* Page */
+  --bg:#f5f6f8; --fg:#16223b; --muted:#56627a; --rule:#d9dee7; --sheet:#ffffff; --link:#1f4fa8;
+  /* App: ballpoint ink on a form, highlighter marks what to fill in */
+  --ink:#16223b; --ink-2:#2a3a5e; --paper:#f7f8fa; --card:#ffffff; --line:#dde2ea; --soft:#5d6880;
+  --hl:#ffd43b; --hl-deep:#e8b500; --stamp:#c8102e; --stamp-bg:#fdecee; --ok:#2f7d4f; --ok-bg:#e8f3ec;
+  --f:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10151f;--fg:#e8ecf3;--muted:#9aa5b8;--rule:#2a3345;--sheet:#171e2b;--link:#8fb3ff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10151f;--fg:#e8ecf3;--muted:#9aa5b8;--rule:#2a3345;--sheet:#171e2b;--link:#8fb3ff;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f);font-size:16px;line-height:1.6}
+.wrap{max-width:1500px;margin:0 auto;padding-block:40px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:44px}
+header{display:grid;gap:12px;max-width:70ch}
+h1{font-size:clamp(30px,4.4vw,46px);line-height:1.1;margin:0;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+header p{margin:0;color:var(--muted)}
+a{color:var(--link)}
+.strip{display:flex;gap:28px;overflow-x:auto;padding:4px 2px 16px;align-items:flex-start;min-width:0}
+figure{margin:0;flex:0 0 268px;display:grid;gap:14px}
+figcaption{display:grid;gap:4px;font-size:14.5px;line-height:1.5}
+figcaption b{font-size:16px}
+figcaption span{color:var(--muted)}
+sup{font-size:11px;line-height:0}
+.changes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:32px;border-top:1px solid var(--rule);padding-top:32px}
+.changes h2{font-size:21px;margin:0 0 10px;line-height:1.25}
+.changes ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.changes p{margin:0}
+footer{font-size:13.5px;color:var(--muted);border-top:1px solid var(--rule);padding-top:24px}
+footer ol{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
+
+/* ---------- phone ---------- */
+.phone{width:268px;height:566px;border-radius:38px;background:#0d1322;padding:8px;box-shadow:0 1px 0 #fff2 inset,0 18px 40px -18px rgba(13,19,34,.55)}
+.scr{position:relative;width:100%;height:100%;border-radius:31px;overflow:hidden;background:var(--paper);color:var(--ink);display:flex;flex-direction:column;font-family:var(--f)}
+.sb{height:26px;flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;padding:0 18px;font-size:10.5px;font-weight:600;color:var(--ink)}
+.body{flex:1;min-height:0;padding:6px 16px 16px;display:flex;flex-direction:column;gap:12px}
+
+/* readiness line: one row, expands only when something is wrong */
+.ready{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ok)}
+.ready i{width:18px;height:18px;border-radius:50%;background:var(--ok);display:grid;place-items:center}
+.ready i::after{content:"";width:7px;height:4px;border:2px solid #fff;border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+.ready em{font-style:normal;color:var(--soft);font-weight:500;margin-left:auto;text-decoration:underline;text-underline-offset:2px}
+
+.q{font-size:25px;line-height:1.18;font-weight:800;letter-spacing:-.01em;margin:6px 0 0}
+.field{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:12px 12px 12px 14px;display:flex;gap:10px;align-items:center;min-height:72px}
+.field.live{border-color:var(--ink)}
+.field p{margin:0;flex:1;font-size:15.5px;line-height:1.35}
+.field p.ph{color:var(--soft)}
+.mic{flex:0 0 auto;width:52px;height:52px;border-radius:50%;background:var(--ink);display:grid;place-items:center}
+.mic::before{content:"";width:11px;height:19px;border-radius:6px;background:var(--hl)}
+.mic.on{box-shadow:0 0 0 6px rgba(255,212,59,.55)}
+.lbl{font-size:13px;font-weight:600;color:var(--soft);margin:2px 0 -4px}
+.known{display:grid;border-top:1px solid var(--line)}
+.known div{display:flex;align-items:center;gap:10px;min-height:52px;border-bottom:1px solid var(--line);font-size:15px;font-weight:600}
+.known div::after{content:"";margin-left:auto;width:8px;height:8px;border:2px solid var(--soft);border-left:0;border-bottom:0;transform:rotate(45deg)}
+.match{background:var(--card);border-radius:14px;padding:12px 14px;border-left:6px solid var(--hl);display:grid;gap:3px;box-shadow:0 1px 0 var(--line)}
+.match b{font-size:15px;line-height:1.3}
+.match small{font-size:12px;color:var(--soft)}
+.go{margin-top:auto;display:grid;gap:8px}
+.start{background:var(--ink);color:#fff;border-radius:18px;min-height:64px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:19px;font-weight:800}
+.start.off{background:var(--line);color:var(--soft)}
+.go small{font-size:12px;color:var(--soft);text-align:center;line-height:1.4}
+.mini{display:inline-block;width:20px;height:20px;border-radius:50%;background:var(--ink);box-shadow:inset 0 0 0 4px var(--ink),inset 0 0 0 7px var(--hl);vertical-align:-5px}
+.start .mini{background:#fff;box-shadow:inset 0 0 0 4px #fff,inset 0 0 0 7px var(--hl)}
+.side{font-size:13.5px;font-weight:600;text-align:center;color:var(--ink-2);text-decoration:underline;text-underline-offset:3px}
+
+/* web page under the overlay */
+.web{flex:1;background:#fff;display:flex;flex-direction:column;font-size:11px;color:#333}
+.addr{margin:4px 10px 6px;background:#eef0f3;border-radius:999px;padding:6px 12px;font-size:10.5px;color:#555}
+.whead{background:#a3151b;color:#fff;padding:9px 12px;font-weight:700;font-size:11.5px}
+.row{padding:10px 12px;border-bottom:1px solid #eee;line-height:1.35;height:58px}
+.row b{color:#1a4f9c;font-weight:600}
+.wbtn{margin:14px 12px 0;background:#1a4f9c;color:#fff;border-radius:6px;text-align:center;padding:11px;font-weight:700;font-size:12px}
+.ring{position:absolute;border-radius:12px;border:5px solid var(--hl);outline:2px solid var(--ink);outline-offset:0;box-shadow:0 0 0 999px rgba(13,19,34,.55)}
+.ring::after{content:"";position:absolute;inset:-11px;border:3px solid var(--hl);border-radius:18px;opacity:0;animation:pulse 1.8s ease-out infinite}
+.ring.caution{border-color:#ff8a8a;outline-color:var(--stamp)}
+.ring.caution::after{border-color:#ff8a8a}
+@keyframes pulse{0%{opacity:.9;transform:scale(.97)}100%{opacity:0;transform:scale(1.07)}}
+@media (prefers-reduced-motion:reduce){.ring::after{animation:none;opacity:.5}}
+.bubble{position:absolute;width:56px;height:56px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px #fff,0 6px 14px rgba(0,0,0,.4);display:grid;place-items:center}
+.bubble::before{content:"";width:24px;height:24px;border-radius:50%;border:4px solid var(--hl)}
+.sheet{position:absolute;left:8px;right:8px;bottom:8px;background:var(--card);border-radius:24px;padding:14px 16px 16px;display:grid;gap:10px;box-shadow:0 -4px 24px rgba(0,0,0,.25)}
+.steps{display:flex;gap:5px}
+.steps i{flex:1;height:7px;border-radius:4px;background:var(--line)}
+.steps i.d{background:var(--ok)} .steps i.n{background:var(--hl-deep)}
+.meta{display:flex;justify-content:space-between;font-size:12px;color:var(--soft);font-weight:500}
+.say{font-size:18px;line-height:1.32;font-weight:700;margin:0}
+.say mark{background:linear-gradient(transparent 55%,var(--hl) 55%);color:inherit;padding:0 2px}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.acts div{min-height:48px;border-radius:14px;background:var(--paper);border:2px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:14px}
+.warnbar{background:var(--stamp-bg);color:var(--stamp);border-radius:12px;padding:8px 10px;font-size:13px;font-weight:700;line-height:1.35}
+
+/* doc check */
+.h2{font-size:22px;font-weight:800;line-height:1.2;margin:4px 0 0}
+.frame{position:relative;border-radius:16px;background:#20283a;aspect-ratio:1.5;overflow:hidden}
+.card-id{position:absolute;inset:16% 12%;border-radius:8px;background:linear-gradient(135deg,#dfe9f6,#b5cbe6);filter:blur(2.4px)}
+.card-id::before{content:"";position:absolute;left:8%;top:18%;width:22%;height:52%;background:#9fb3cf;border-radius:4px}
+.card-id::after{content:"";position:absolute;left:36%;right:10%;top:24%;height:40%;background:repeating-linear-gradient(#8ea3c2 0 4px,transparent 4px 10px)}
+.verdict{border-radius:16px;padding:12px 14px;background:var(--stamp-bg);display:grid;gap:6px}
+.verdict b{color:var(--stamp);font-size:16px}
+.verdict ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.45;display:grid;gap:3px}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Phương án A, có chỗ để bác nói việc mình cần làm</h1>
+  <p>Giữ một nút bắt đầu như bản A, thêm ô hỏi việc của bản C ngay trên trang chủ. Màu đổi sang mực bút bi và bút dạ quang: thứ người ta vẫn dùng để đánh dấu chỗ cần điền trên tờ khai giấy. Năm màn dưới đây là một lượt dùng thật, từ lúc mở app tới lúc nộp ảnh.</p>
+</header>
+
+<div class="strip">
+
+  <!-- 1. Home, empty -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="sb"><span>9:41</span><span>Chỉ Đây</span></div>
+      <div class="body">
+        <div class="ready"><i></i>Sẵn sàng<em>Xem chi tiết</em></div>
+        <p class="q">Bác cần làm việc gì?</p>
+        <div class="field"><p class="ph">Bấm micro rồi nói, hoặc gõ vào đây</p><div class="mic"></div></div>
+        <div class="lbl">Việc đã có hướng dẫn sẵn</div>
+        <div class="known">
+          <div>Xin bản sao giấy khai sinh</div>
+          <div>Làm chữ trên máy to hơn</div>
+        </div>
+        <div class="go">
+          <div class="start off">Bắt đầu</div>
+          <small>Nói hoặc chọn một việc trước đã</small>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><b>1. Mở app</b><span>Câu hỏi nằm ở trên cùng, to nhất. Ba mục kiểm tra gộp thành một dòng xanh, chỉ bung ra khi có mục hỏng. Hàng gợi ý cao 52px, trên mức 48dp của Material.<sup>3</sup></span></figcaption>
+  </figure>
+
+  <!-- 2. Home, spoken goal -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="sb"><span>9:41</span><span>Chỉ Đây</span></div>
+      <div class="body">
+        <div class="ready"><i></i>Sẵn sàng<em>Xem chi tiết</em></div>
+        <p class="q">Bác cần làm việc gì?</p>
+        <div class="field live"><p>Tôi muốn xin bản sao giấy khai sinh cho cháu</p><div class="mic on"></div></div>
+        <div class="match"><b>Có hướng dẫn sẵn cho việc này</b><small>Bản sao Giấy khai sinh, 3 bước trên dichvucong.gov.vn. Nhóm đã thử trên điện thoại ngày 14/11.</small></div>
+        <div class="go">
+          <div class="start"><span class="mini"></span>Bắt đầu</div>
+          <small>Chỉ Đây mở trang dịch vụ công. Khi bác bí, bấm nút <span class="mini"></span> nổi trên màn hình.</small>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><b>2. Nói việc cần làm</b><span>Câu bác nói được ghép với hướng dẫn đã kiểm chứng, nên AI biết đúng các bước ngay từ đầu. Không khớp hướng dẫn nào thì vẫn chạy, kèm nhãn "chưa kiểm chứng".</span></figcaption>
+  </figure>
+
+  <!-- 3. Overlay -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="sb"><span>9:42</span><span>Chrome</span></div>
+      <div class="web">
+        <div class="addr">dichvucong.gov.vn</div>
+        <div class="whead">Kết quả tìm kiếm: khai sinh</div>
+        <div class="row"><b>Đăng ký khai sinh</b><br>Cấp xã</div>
+        <div class="row"><b>Cấp bản sao trích lục hộ tịch, bản sao Giấy khai sinh</b></div>
+        <div class="row"><b>Đăng ký lại khai sinh</b><br>Cấp xã</div>
+      </div>
+      <div class="ring" style="left:6px;right:6px;top:149px;height:58px"></div>
+      <div class="bubble" style="right:12px;top:232px"></div>
+      <div class="sheet">
+        <div class="steps"><i class="d"></i><i class="n"></i><i></i></div>
+        <div class="meta"><span>Bước 2 trên 3</span><span>Đang đọc to</span></div>
+        <p class="say">Bác bấm vào dòng <mark>Cấp bản sao Giấy khai sinh</mark>, dòng thứ hai.</p>
+        <div class="acts"><div>Nói lại</div><div>Dừng</div></div>
+      </div>
+    </div></div>
+    <figcaption><b>3. Được chỉ chỗ bấm</b><span>Vòng vàng viền mực nổi trên cả nền trắng lẫn nền tối. Chữ trong thẻ gạch dạ quang đúng tên nút, nên mắt dò ngay ra. Thanh tiến độ lấy từ bản B. Thẻ nằm ở đáy, trong tầm ngón cái.</span></figcaption>
+  </figure>
+
+  <!-- 4. Caution -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="sb"><span>9:44</span><span>Chrome</span></div>
+      <div class="web">
+        <div class="addr">dichvucong.gov.vn</div>
+        <div class="whead">Cấp bản sao Giấy khai sinh</div>
+        <div class="row"><b>Thành phần hồ sơ</b><br>Tờ khai theo mẫu, giấy tờ tùy thân</div>
+        <div class="row"><b>Lệ phí</b><br>8.000 đồng/bản</div>
+        <div class="wbtn">Nộp hồ sơ</div>
+      </div>
+      <div class="ring caution" style="left:8px;right:8px;top:218px;height:50px"></div>
+      <div class="sheet">
+        <div class="steps"><i class="d"></i><i class="d"></i><i class="n"></i></div>
+        <div class="warnbar">Bước này gửi hồ sơ đi. Bác đọc kỹ lại trước khi bấm.</div>
+        <p class="say">Nếu thông tin đã đúng, bác bấm nút <mark>Nộp hồ sơ</mark> màu xanh.</p>
+        <div class="acts"><div>Nói lại</div><div>Dừng</div></div>
+      </div>
+    </div></div>
+    <figcaption><b>4. Bước cần cẩn thận</b><span>Nộp, trả tiền hay xóa thì vòng đổi sang đỏ con dấu và có dòng nhắc riêng. Chỉ Đây vẫn không bấm thay bác.</span></figcaption>
+  </figure>
+
+  <!-- 5. Doc check -->
+  <figure>
+    <div class="phone"><div class="scr">
+      <div class="sb"><span>9:46</span><span>Quay lại</span></div>
+      <div class="body">
+        <p class="h2">Ảnh căn cước của bác</p>
+        <div class="frame"><div class="card-id"></div></div>
+        <div class="verdict"><b>Cần chụp lại</b>
+          <ul><li>Ảnh mờ, chưa đọc được số trên thẻ.</li><li>Góc dưới bên phải bị cắt mất.</li></ul>
+        </div>
+        <div class="go">
+          <div class="start">Chụp lại</div>
+          <small>Đặt thẻ lên bàn chỗ sáng, giữ máy yên.</small>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><b>5. Kiểm tra ảnh giấy tờ</b><span>Nói rõ hỏng ở đâu và sửa thế nào, thay vì một chữ "không đạt". Nút chính giữ cùng chỗ, cùng kiểu với nút Bắt đầu.</span></figcaption>
+  </figure>
+</div>
+
+<section class="changes">
+  <div>
+    <h2>Đổi gì so với bản trước</h2>
+    <ul>
+      <li>Thêm ô "Bác cần làm việc gì?" có micro, lấy từ bản C nhưng bỏ dạng chat, vì khung chat làm trang chủ dài ra và đẩy nút bắt đầu xuống thấp.</li>
+      <li>Nút tròn lớn chuyển thành nút Bắt đầu rộng hết màn ở đáy, có hình nút nổi bên trong để bác nhận ra nó khi ra ngoài app.</li>
+      <li>Màu cam đổi sang mực xanh và vàng dạ quang. Vàng trên nền tối mờ dễ thấy hơn cam trên trang web vốn đã nhiều màu đỏ cam.</li>
+      <li>Thêm màn bước cẩn thận, đúng với cờ <code>caution</code> mà GuideEngine đã có.</li>
+    </ul>
+  </div>
+  <div>
+    <h2>Vì sao làm như vậy</h2>
+    <p>Bài tổng quan trên JMIR mHealth (2023) gom 28 hướng dẫn thiết kế app cho người từ 60 tuổi, và hai nguyên tắc có trọng lượng nhất là đơn giản hóa và làm nút to, cách xa nhau.<sup>1</sup> Vì vậy trang chủ chỉ còn ba thứ: câu hỏi, gợi ý, nút bắt đầu. Chữ thân từ 15px trở lên trong khung 268px, tương đương khoảng 18sp trên máy thật.<sup>2</sup> Ở Việt Nam, nghiên cứu khảo sát 1.043 người cao tuổi cho thấy yếu tố nhân khẩu học, như tuổi, học vấn và nơi sống, ảnh hưởng mạnh nhất tới việc thích nghi với công nghệ.<sup>4</sup> Đó là lý do cho phép nói thay vì bắt gõ.</p>
+  </div>
+</section>
+
+<footer>
+  Nguồn
+  <ol>
+    <li>Gomez-Hernandez và cộng sự (2023), systematic review về hướng dẫn thiết kế app cho người cao tuổi, <i>JMIR mHealth and uHealth</i>. <a href="https://mhealth.jmir.org/2023/1/e43186/PDF">mhealth.jmir.org</a></li>
+    <li>Smashing Magazine (2015), Designing for the elderly. <a href="https://www.smashingmagazine.com/2015/02/designing-digital-technology-for-the-elderly/">smashingmagazine.com</a>. Nielsen Norman Group, Why design for older adults. <a href="https://www.nngroup.com/alertbox/seniors.html">nngroup.com</a></li>
+    <li>Google, Touch target size. <a href="https://support.google.com/accessibility/android/answer/7101858?hl=en-GB">support.google.com</a>. TetraLogical, Foundations: target sizes (WCAG 2.5.5 và 2.5.8). <a href="https://tetralogical.com/blog/2022/12/20/foundations-target-size/">tetralogical.com</a></li>
+    <li>Elderly people's adaptation to the evolving digital society: a case study in Vietnam, <i>Social Sciences</i> 11(8), 2022. <a href="https://econpapers.repec.org/RePEc:gam:jscscx:v:11:y:2022:i:8:p:324-:d:871344">econpapers.repec.org</a></li>
+  </ol>
+</footer>
+</div>
