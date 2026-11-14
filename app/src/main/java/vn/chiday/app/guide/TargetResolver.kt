@@ -104,7 +104,8 @@ object TargetResolver {
             val overlap = intersect(visible, o) ?: continue
             if (area(overlap) <= visibleArea * MAX_COVERED) continue
             // A container of the target or something inside it is not a cover.
-            if (contains(o, b) || contains(b, o)) continue
+            // (Loose fit: a widget's background can be a few pixels shorter than the part on it.)
+            if (contains(o, b, WRAP_SLACK) || contains(b, o, WRAP_SLACK)) continue
             // Drawn later (further on in the tree) or smaller: it sits on top of the target.
             if (j > index || area(o) < area(b)) {
                 return Outcome.Nudge(index, if (centreY(o) >= centreY(b)) Towards.BELOW else Towards.ABOVE)
@@ -134,9 +135,11 @@ object TargetResolver {
 
     private const val SLACK = 2
 
-    private fun contains(outer: List<Int>, inner: List<Int>) =
-        outer[0] <= inner[0] + SLACK && outer[1] <= inner[1] + SLACK &&
-            outer[2] >= inner[2] - SLACK && outer[3] >= inner[3] - SLACK
+    private const val WRAP_SLACK = 24
+
+    private fun contains(outer: List<Int>, inner: List<Int>, slack: Int = SLACK) =
+        outer[0] <= inner[0] + slack && outer[1] <= inner[1] + slack &&
+            outer[2] >= inner[2] - slack && outer[3] >= inner[3] - slack
 
     private fun intersect(a: List<Int>, b: List<Int>): List<Int>? {
         val l = maxOf(a[0], b[0])

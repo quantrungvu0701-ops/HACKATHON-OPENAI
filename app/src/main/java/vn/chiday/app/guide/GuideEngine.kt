@@ -265,6 +265,17 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         }
         if (playbook == null) {
             append("PLAYBOOK: none\n")
+            // Not in the service yet (home screen, another app, another site): say where the goal
+            // is done, so the guide leads there through a real browser or the app itself.
+            val wanted = g?.let { goalText -> PlaybookStore.matchGoal(goalText, playbooks.all()) }
+            val site = wanted?.match?.hosts?.firstOrNull()
+            when {
+                site != null -> append("DESTINATION: the website ").append(site)
+                    .append(" in a web browser. The user is not there yet: lead them to it (see the browser rule).\n")
+                wanted != null -> append("DESTINATION: the app \"").append(wanted.service)
+                    .append("\". The user is not in it yet: point at that app's icon to open it.\n")
+                else -> append("DESTINATION: unknown. If the goal needs looking something up, lead the user to a web browser (see the browser rule).\n")
+            }
         } else {
             val n = lastStepN
             val current = if (n == null) null else {
@@ -345,6 +356,21 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
                 "that field again: set action=\"type\", target that field, and tell them exactly what " +
                 "words to type on the keyboard and which key to press after (the magnifier or Enter key). " +
                 "If that field is already \"filled\", point at the search/submit button or the result to press instead. " +
+                "Browser rule: when the user is on the phone's home screen, app list or the phone's own " +
+                "search (Finder) and the goal needs a website or looking something up, NEVER send them " +
+                "to the phone's search box: its suggestions are useless. Point at the icon of a real " +
+                "web browser instead (Chrome first, else \"Internet\"/Samsung Internet). If no browser " +
+                "icon is visible but a Google search bar is (labelled \"Google Search\" or with ids " +
+                "containing \"googleapp_search_widget\"), point at that bar: it is the real Google, not " +
+                "the phone's own search, and typing the DESTINATION address there opens the website. " +
+                "Only if neither is visible: on the home screen set action=\"scroll\", target=null and " +
+                "tell them to swipe up from the middle of the screen to open the list of all apps; in " +
+                "the app list point at Chrome if visible, else tell them to swipe sideways to see more apps. " +
+                "A search bar or address bar that is not \"focused\" yet must be tapped first: say only to tap it (action=\"tap\"); say what to type only once it is focused. " +
+                "Never ask the user to report back or to tell you anything. Once inside the browser but not on " +
+                "the DESTINATION website: point at the address bar at the top (or the search box in " +
+                "the middle of a new tab), and when it is focused tell them to type the DESTINATION " +
+                "address exactly (for example vnpost.vn) and press the Go/Enter key. " +
                 "For privacy, input fields never show what the user typed: \"filled\": true means " +
                 "the field already has something in it, false means it is empty. Masked values " +
                 "(••••••, [email]) are hidden personal data: never ask the user to read them out. " +
