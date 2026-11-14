@@ -78,8 +78,20 @@ object ScreenReader {
 
         val walker = Walker(screen)
         walker.visit(root, absorbed = false, ancestorLabel = null)
-        return ScreenSnapshot(pkg, walker.host, walker.nodes, walker.rects, Rect(screen))
+        // Browsers hide their address bar while the page scrolls. Keep the last host read from
+        // the bar for that browser until the bar is visible again.
+        val read = walker.host
+        val last = lastBrowserHost
+        val host = when {
+            read != null -> read.also { lastBrowserHost = pkg to it }
+            !walker.sawUrlBar && last != null && last.first == pkg -> last.second
+            else -> null
+        }
+        return ScreenSnapshot(pkg, host, walker.nodes, walker.rects, Rect(screen))
     }
+
+    /** (browser package, host) from the last read that showed the browser's address bar. */
+    private var lastBrowserHost: Pair<String, String>? = null
 
     /**
      * The window the user is working in. Tapping our bubble can make the bubble's own window
@@ -111,11 +123,27 @@ object ScreenReader {
         val nodes = ArrayList<UiNode>()
         val rects = ArrayList<Rect>()
         var host: String? = null
+        var sawUrlBar = false
         private var visited = 0
 
-        fun visit(node: AccessibilityNodeInfo, absorbed: Boolean, ancestorLabel: String?) {
+        fun visit(node: AccessibilityNodeInfo, absorbed: Boolean, ancestorLabel: String?, inWeb: Boolean = false) {
             if (nodes.size >= MAX_NODES || visited++ >= MAX_VISITED) return
-            if (!node.isVisibleToUser) return
+            if (!node.isVisibleToUser) {
+                // Chrome marks web containers "not visible" once their top is scrolled off screen
+                // (the page root, then e.g. Wikipedia's main column), while content inside them is
+                // on screen. Chrome clips an off-screen node's bounds to the nearest screen edge,
+                // so walk into hidden containers clipped to the top edge and skip those clipped to
+                // the bottom edge (page content below the screen).
+                if (!inWeb || node.childCount == 0) return
+                val hr = Rect()
+                node.getBoundsInScreen(hr)
+                if (hr.top >= screen.centerY()) return
+                for (c in 0 until node.childCount) {
+                    val child = node.getChild(c) ?: continue
+                    visit(child, absorbed, ancestorLabel, inWeb = true)
+                }
+                return
+            }
 
             val r = Rect()
             node.getBoundsInScreen(r)
@@ -130,6 +158,7 @@ object ScreenReader {
             val hint = clean(node.hintText)?.takeIf { it != text }
 
             if (id != null && host == null && BROWSER_URL_BAR_IDS.any { id.endsWith(it) }) {
+                sawUrlBar = true
                 host = hostOf(node.text?.toString())
             }
 
@@ -171,6 +200,7 @@ object ScreenReader {
                     child,
                     absorbed = absorbChildren || (absorbed && !clickable),
                     ancestorLabel = if (clickable && label != null) label else ancestorLabel,
+                    inWeb = inWeb || node.className == "android.webkit.WebView",
                 )
             }
         }

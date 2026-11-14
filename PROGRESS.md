@@ -302,7 +302,17 @@ Order of work when the phone and the host's key arrive:
   (2) Scrolled further, the web content disappears from the snapshot: `nodes=0`, or `nodes=4`
   (only Chrome's own buttons) once the address bar is back, while `uiautomator dump` at the same
   spot lists about 540 nodes with the visible text. The same happens on a long Wikipedia page.
-  Not fixed yet. Ideas: keep the last host seen for the browser package while the URL bar is
-  hidden; find which check in `Walker.visit` stops inside the WebView subtree
-  (`isVisibleToUser` on a container, or the visit limits). Until then, keep demos to the top
-  part of a web page.
+  Both fixed in the next entry.
+- **ScreenReader reads scrolled Chrome pages (2026-11-14).** Cause of (2): once the top of a web
+  container scrolls off screen, Chrome marks that container `isVisibleToUser=false` (first the page
+  root, then on Wikipedia the main column too), and `Walker.visit` stopped there although the
+  children were on screen. Chrome clips an off-screen node's bounds to the nearest screen edge,
+  e.g. `[0,101][1080,101]` for the hidden root, while content below the screen sits at the bottom
+  edge. `Walker.visit` now walks into a hidden node only inside a WebView, only if it has children,
+  and only when its clipped top is in the upper half of the screen; native apps are read as before.
+  Fix for (1): `ScreenReader` keeps the last host read from the browser's address bar and reuses
+  it while that browser's bar is not in the tree; a visible bar always wins.
+  Checked on the Galaxy A56: dichvucong scrolled deep reads about 470 nodes visited and 14 to 30
+  kept, with the address bar hidden the playbook is still picked (`likelyStep=3`), and the full
+  flow ends with the ring on «Thành phần hồ sơ» ("Bước 3/3"). A long Wikipedia page scrolled deep
+  reads 16 to 36 nodes (was 0). Samsung Settings still picks its playbook and rings «Display».

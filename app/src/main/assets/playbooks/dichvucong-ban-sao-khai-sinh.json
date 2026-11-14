@@ -9,7 +9,7 @@
   },
   "goal": "Xem cần giấy tờ gì để xin bản sao Giấy khai sinh",
   "verified": {
-    "by": "team; steps 1-2 on a Galaxy A56 (Chrome, Android 16, Wi-Fi), step 3 on desktop Chrome only (ScreenReader loses the page when scrolled deep, see PROGRESS); public pages only, no login",
+    "by": "team, Galaxy A56 (Chrome, Android 16, Wi-Fi), all 3 steps with the stub; public pages only, no login",
     "date": "2026-11-14"
   },
   "steps": [
