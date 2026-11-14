@@ -86,6 +86,7 @@ def guide_reply(text):
     nodes = screen.get("nodes", [])
     alltext = NL.join(label(n) for n in nodes)
     target, step_n, total, caution, pitfall = None, None, 4, STATE["caution"], None
+    scroll_do, scroll_up = None, False
 
     playbook = field(text, "PLAYBOOK")
     if playbook and playbook != "none":
@@ -98,6 +99,11 @@ def guide_reply(text):
             target = find_node(nodes, step["target_hint"], literal=True)
             step_n, pitfall = step.get("n"), step.get("pitfall")
             caution = caution or bool(step.get("caution"))
+        # A step whose "do" starts with "Kéo" is a scroll step: the model should say to scroll.
+        do = (step or {}).get("do", "").strip()
+        if do.lower().startswith("kéo"):
+            scroll_do, scroll_up = do, "lên" in re.findall(r"\w+", do.lower())[:4]
+            step_n = step.get("n")
     else:
         # Rules "signal~target;;signal~target": the first rule whose signal is on screen wins.
         rules = STATE["pick"].split(";;")
@@ -112,6 +118,19 @@ def guide_reply(text):
                 break
 
     STATE["step"] += 1
+    if scroll_do:
+        # Scroll steps never say "bấm"; the target may still be below the screen (target null).
+        say = "Bác %s%s." % (scroll_do[0].lower(), scroll_do[1:].rstrip("."))
+        if pitfall:
+            say += " " + pitfall
+        reply = json.dumps({
+            "service": screen.get("host") or screen.get("package"),
+            "step": step_n, "total_steps": total, "target": target["i"] if target else None,
+            "action": "scroll", "say": say,
+            "subtitle": "Kéo màn hình lên" if scroll_up else "Kéo màn hình xuống",
+            "caution": caution, "confidence": 0.9,
+        }, ensure_ascii=False)
+        return "```json" + NL + reply + NL + "```"
     if target is None:
         return json.dumps({"service": "stub", "step": step_n, "total_steps": total, "target": None,
                            "action": "none", "say": "", "subtitle": "", "caution": False,
