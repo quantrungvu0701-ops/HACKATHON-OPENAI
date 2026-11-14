@@ -271,3 +271,21 @@ Order of work when the phone and the host's key arrive:
   (6) The Samsung photo picker is Google Photos with a "Done" button: one extra tap compared
   with the emulator's picker. It shows the owner's whole gallery, so do the demo with a
   sample card, not someone's real ID.
+- **Two more bundled playbooks for the demo (2026-11-14).**
+  `samsung-phong-to-chu` (Samsung Settings > Display > Font size and style > «A» lớn, 3 steps)
+  ran end to end on the Galaxy A56 with the stub and one bubble tap: "Bước 1/3" to "3/3", follow
+  mode moved on by itself, and the ring followed the Display row while the screen scrolled.
+  Found there: on a freshly opened Settings the Display row sits under the floating «Search»
+  pill, so a tap on the ring's centre opens Search. Step 1's pitfall now says to scroll first.
+  A planned step 4 («Bold font») could never show, because the step 3 target («A» lớn) stays on
+  screen, so the Bold tip moved into step 3's pitfall. English UI only: the Vietnamese labels
+  in `signals` are guesses and not checked.
+  `dichvucong-ban-sao-khai-sinh` (dichvucong.gov.vn, public pages only: search «khai sinh» >
+  «Cấp bản sao ... Giấy khai sinh» > «Thành phần hồ sơ», stop before «Nộp hồ sơ», which needs
+  VNeID). The site was redesigned (old `/p/home/...` links give "Trang không tồn tại"). On the
+  phone: the playbook is picked on the home page, and step 2 rings the right row. Step 1's search
+  box has no label in the accessibility tree (React id only), so the stub cannot find it and
+  answers "chưa chắc"; the target hint now describes its place for the real model. Step 3 was
+  checked on desktop Chrome only: on the phone's mobile data the detail page stayed blank for
+  more than 2 minutes, and pages took 40 to 60 s each. Chrome also shows an «Install» banner for
+  the site. This demo needs Wi-Fi.

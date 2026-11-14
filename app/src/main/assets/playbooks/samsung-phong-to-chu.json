@@ -1,0 +1,54 @@
+{
+  "id": "samsung-phong-to-chu",
+  "service": "Cài đặt điện thoại Samsung",
+  "match": {
+    "packages": [
+      "com.android.settings"
+    ],
+    "hosts": []
+  },
+  "goal": "Phóng to chữ cho dễ đọc",
+  "verified": {
+    "by": "team, Galaxy A56 (One UI, Android 16, English UI); Vietnamese labels not checked",
+    "date": "2026-11-14"
+  },
+  "steps": [
+    {
+      "n": 1,
+      "signals": [
+        "Connected devices",
+        "Sounds and vibration",
+        "Notifications",
+        "Thiết bị đã kết nối",
+        "Âm thanh và rung"
+      ],
+      "do": "Kéo màn hình lên một chút rồi bấm vào mục «Display» (Màn hình)",
+      "target_hint": "Display",
+      "pitfall": "Mục này nằm dưới «Notifications», ngay sau ô tìm kiếm «Search» nổi ở đáy màn hình. Bác kéo màn hình lên cho mục «Display» hiện rõ rồi mới bấm, kẻo bấm nhầm vào ô tìm kiếm."
+    },
+    {
+      "n": 2,
+      "signals": [
+        "Brightness",
+        "Adaptive brightness",
+        "Eye comfort shield",
+        "Độ sáng",
+        "Độ sáng thích ứng"
+      ],
+      "do": "Bấm vào «Font size and style» (Cỡ chữ và kiểu chữ) ở cuối màn hình",
+      "target_hint": "Font size and style",
+      "pitfall": "Đừng kéo thanh «Brightness», thanh đó chỉnh độ sáng màn hình."
+    },
+    {
+      "n": 3,
+      "signals": [
+        "Main text will look like this",
+        "Font style",
+        "Bold font"
+      ],
+      "do": "Bấm vào chữ «A» to ở góc dưới bên phải, mỗi lần bấm chữ to thêm một nấc. Bác xem dòng chữ mẫu ở trên đến khi vừa mắt thì dừng",
+      "target_hint": "Increase font size",
+      "pitfall": "Chữ «A» nhỏ bên trái là thu nhỏ chữ lại. Muốn chữ đậm hơn thì bấm thêm công tắc «Bold font» (Chữ in đậm) ở giữa màn hình."
+    }
+  ]
+}
