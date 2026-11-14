@@ -233,7 +233,8 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
             // The model chose; geometry decides whether a finger can land there (TargetResolver).
             val boxes = snapshot.nodes.mapIndexed { i, n ->
                 val r = snapshot.fullRects[i]
-                TargetResolver.Node(listOf(r.left, r.top, r.right, r.bottom), n.clickable == true)
+                val v = snapshot.rects[i]
+                TargetResolver.Node(listOf(r.left, r.top, r.right, r.bottom), n.clickable == true, listOf(v.left, v.top, v.right, v.bottom))
             }
             val s = snapshot.screen
             return when (val o = TargetResolver.resolve(boxes, listOf(s.left, s.top, s.right, s.bottom), target, scrollStep, towards)) {

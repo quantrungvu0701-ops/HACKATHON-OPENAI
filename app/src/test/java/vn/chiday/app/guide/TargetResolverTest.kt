@@ -43,6 +43,12 @@ class TargetResolverTest {
         assertEquals(Outcome.Nudge(0, Towards.ABOVE), TargetResolver.resolve(nodes, screen, 0))
     }
 
+    @Test fun rowClippedByItsListAboveTheNavigationBarIsNudged() {
+        // Real size 231 px, but the list only draws 130 px of it above the navigation bar.
+        val nodes = listOf(Node(listOf(0, 2207, 1080, 2438), true, shown = listOf(0, 2207, 1080, 2337)))
+        assertEquals(Outcome.Nudge(0, Towards.BELOW), TargetResolver.resolve(nodes, listOf(0, 0, 1080, 2400), 0))
+    }
+
     @Test fun slightlyCutTargetIsStillTapped() {
         val nodes = listOf(node(0, 2180, 1080, 2380)) // 80% visible
         assertEquals(Outcome.Tap(0), TargetResolver.resolve(nodes, screen, 0))
@@ -56,7 +62,7 @@ class TargetResolverTest {
     @Test fun rowUnderFloatingButtonIsNudged() {
         val nodes = listOf(
             node(0, 2000, 1080, 2200), // «Display» row
-            node(500, 2050, 1040, 2190), // floating «Search» pill drawn later
+            node(200, 2080, 1000, 2260), // floating «Search» pill drawn later, straddling the row
         )
         assertEquals(Outcome.Nudge(0, Towards.BELOW), TargetResolver.resolve(nodes, screen, 0))
     }

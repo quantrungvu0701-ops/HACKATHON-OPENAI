@@ -12,8 +12,12 @@ package vn.chiday.app.guide
  */
 object TargetResolver {
 
-    /** [bounds] is `[left, top, right, bottom]` in screen pixels, NOT clipped to the screen. */
-    data class Node(val bounds: List<Int>, val clickable: Boolean)
+    /**
+     * [bounds] is `[left, top, right, bottom]` in screen pixels, NOT clipped: the element's real
+     * size. [shown] is the part of it that is actually drawn (clipped by the screen, by system
+     * bars and by scrolling containers); it defaults to [bounds].
+     */
+    data class Node(val bounds: List<Int>, val clickable: Boolean, val shown: List<Int> = bounds)
 
     /** Where the content the user needs is, relative to what is on screen now. */
     enum class Towards { BELOW, ABOVE }
@@ -82,16 +86,17 @@ object TargetResolver {
 
         // Cut off by the top or bottom edge of the screen.
         val height = b[3] - b[1]
-        val visibleHeight = minOf(b[3], screen[3]) - maxOf(b[1], screen[1])
+        val shown = nodes[index].shown
+        val visibleHeight = minOf(shown[3], screen[3]) - maxOf(shown[1], screen[1])
         if (height <= 0 || visibleHeight <= 0) {
             return Outcome.Scroll(if (b[1] >= centreY(screen)) Towards.BELOW else Towards.ABOVE)
         }
         if (visibleHeight < height * MIN_VISIBLE) {
-            return Outcome.Nudge(index, if (b[3] > screen[3]) Towards.BELOW else Towards.ABOVE)
+            return Outcome.Nudge(index, if (b[3] > minOf(shown[3], screen[3])) Towards.BELOW else Towards.ABOVE)
         }
 
         // Hidden under something floating (a search pill, a sticky header, a chat button).
-        val visible = intersect(b, screen) ?: return Outcome.Scroll(scrollTowards)
+        val visible = intersect(shown, screen) ?: return Outcome.Scroll(scrollTowards)
         val visibleArea = area(visible)
         for ((j, other) in nodes.withIndex()) {
             if (j == index || !other.clickable) continue

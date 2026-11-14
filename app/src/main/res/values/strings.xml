@@ -51,6 +51,13 @@
     <string name="guide_step">Bước %1$d/%2$d</string>
     <string name="guide_unverified">chưa kiểm chứng</string>
     <string name="guide_caution">Bác kiểm tra kỹ thông tin trước khi bấm.</string>
+    <string name="guide_move_below">Kéo màn hình để xem phần bên dưới</string>
+    <string name="guide_move_above">Kéo màn hình để xem phần bên trên</string>
+    <string name="guide_nudge_below">Ô cần bấm đang bị che ở phía dưới. Bác đặt ngón tay giữa màn hình rồi đẩy lên một chút.</string>
+    <string name="guide_nudge_above">Ô cần bấm đang bị che ở phía trên. Bác đặt ngón tay giữa màn hình rồi kéo xuống một chút.</string>
+    <string name="guide_look">Bác xem phần đang được khoanh.</string>
+    <string name="guide_miss">Bác bấm chưa trúng, ô cần bấm đang được khoanh.</string>
+    <string name="guide_stuck">Trang chưa đổi, bác chờ một chút hoặc bấm lại.</string>
 
     <!-- Document photo check -->
     <string name="home_open_doccheck">Kiểm tra ảnh giấy tờ</string>

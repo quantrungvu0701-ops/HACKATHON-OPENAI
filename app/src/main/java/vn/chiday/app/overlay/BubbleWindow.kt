@@ -62,10 +62,47 @@ class BubbleWindow(
         lp.x = prefs.getInt("x", screen.width() - sizePx - (8 * density).toInt())
         lp.y = prefs.getInt("y", (screen.height() * 0.55f).toInt())
         clamp()
+        // Saved even when never dragged, so restore() has a home position.
+        prefs.edit().putInt("x", lp.x).putInt("y", lp.y).apply()
         view.contentDescription = service.getString(R.string.bubble_description)
         attachTouch()
         wm.addView(view, lp)
         shown = true
+    }
+
+    /**
+     * Moves the bubble out of the way when it sits on [target] (the ringed element): to the
+     * other side of the screen, or above or below a target that spans the full width. Not
+     * saved: [restore] puts it back where the user left it.
+     */
+    fun avoid(target: android.graphics.Rect) {
+        if (!shown) return
+        val pad = (12 * density).toInt()
+        val zone = android.graphics.Rect(target).apply { inset(-pad, -pad) }
+        if (!android.graphics.Rect.intersects(zone, boundsOnScreen)) return
+        val screen = wm.currentWindowMetrics.bounds
+        val margin = (8 * density).toInt()
+        val other = if (lp.x + sizePx / 2 < screen.width() / 2) screen.width() - sizePx - margin else margin
+        if (other + sizePx <= zone.left || other >= zone.right) {
+            lp.x = other
+        } else {
+            // Full-width target: go above it, or below when there is no room above.
+            lp.y = if (zone.top - sizePx >= (64 * density).toInt()) zone.top - sizePx else zone.bottom
+        }
+        clamp()
+        wm.updateViewLayout(view, lp)
+    }
+
+    /** Back to the saved position after [avoid]. */
+    fun restore() {
+        if (!shown) return
+        val x = prefs.getInt("x", lp.x)
+        val y = prefs.getInt("y", lp.y)
+        if (x == lp.x && y == lp.y) return
+        lp.x = x
+        lp.y = y
+        clamp()
+        wm.updateViewLayout(view, lp)
     }
 
     fun hide() {

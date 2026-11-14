@@ -183,7 +183,20 @@ object ScreenReader {
                 (ancestorLabel == null || !ancestorLabel.contains(label.removeSuffix("…")))
             val keep = onScreen && (clickable || editable || plainTextWorthKeeping)
             if (keep) {
-                fullRects += Rect(r)
+                // Native views report bounds already clipped by their scrolling parent, so a row
+                // half under the screen edge looks like a short, whole row. Its real height is
+                // in getBoundsInParent: grow the rect back on the side that is cut. Web content
+                // is left alone (Chrome reports page bounds unclipped).
+                val full = Rect(r)
+                if (!inWeb) {
+                    val own = Rect()
+                    @Suppress("DEPRECATION")
+                    node.getBoundsInParent(own)
+                    if (own.height() > r.height() + 2) {
+                        if (r.centerY() >= screen.centerY()) full.bottom = full.top + own.height() else full.top = full.bottom - own.height()
+                    }
+                }
+                fullRects += full
                 r.intersect(screen)
                 nodes += UiNode(
                     i = nodes.size,

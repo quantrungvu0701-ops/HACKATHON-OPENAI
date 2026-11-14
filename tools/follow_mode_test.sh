@@ -9,7 +9,7 @@
 # English system language is assumed (the emulator default).
 set -u
 STEPS=4
-curl -s "http://localhost:8787/pick?q=Search%20settings~Network%20%26%20internet;;Hotspot~Data%20Saver;;Use%20Data%20Saver~Unrestricted%20data;;~Navigate%20up" >/dev/null || {
+curl -s "http://localhost:8787/pick?q=Search%20settings~Network%20%26%20internet;;Hotspot~Data%20Saver;;Use%20Data%20Saver~Unrestricted%20data;;~Navigate%20up&playbook=0" >/dev/null || {
   echo "stub server is not running on :8787"; exit 2; }
 
 bubble_centre() {
@@ -59,6 +59,7 @@ taps=$(adb logcat -d -s ChiDay | grep -c "bubble tap")
 auto=$(adb logcat -d -s ChiDay | grep -c "follow mode")
 speech=$(adb logcat -d -s ChiDay | grep -c "speech started")
 adb shell input tap $c   # end the session
+curl -s "http://localhost:8787/pick?q=" >/dev/null   # back to following playbooks
 adb shell am force-stop com.android.settings
 echo "RESULT: rings=$seen bubble_taps=$taps auto_reanalyses=$auto spoken=$speech"
 [ "$seen" -eq "$STEPS" ] && [ "$taps" -eq 1 ] && echo PASS
