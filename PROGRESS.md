@@ -316,3 +316,15 @@ Order of work when the phone and the host's key arrive:
   kept, with the address bar hidden the playbook is still picked (`likelyStep=3`), and the full
   flow ends with the ring on «Thành phần hồ sơ» ("Bước 3/3"). A long Wikipedia page scrolled deep
   reads 16 to 36 nodes (was 0). Samsung Settings still picks its playbook and rings «Display».
+- **Target resolver and tap feedback (2026-11-14, packages 1 and 2; package 1 was rewritten from
+  the handoff contract because the first attempt was never pushed).** `guide/TargetResolver.kt`
+  (pure Kotlin, 16 unit tests in CI) turns the model's index into Tap / Look / Scroll / Nudge.
+  Checked on the emulator with the stub: a Settings row half under the navigation bar gets the
+  "Kéo màn hình để xem phần bên dưới" card with chevrons and no ring; after a swipe the ring
+  appears on the row with no model call; a tap on another row says "Bác bấm chưa trúng";
+  `follow_mode_test.sh` PASS, `kill_reopen_test.sh 3` 3/3. Pending on the phone: the Samsung
+  «Display» row under the floating «Search» pill (a pill that lies wholly inside the row's
+  bounds cannot be told from a child of the row and will NOT be nudged), dichvucong step 3
+  chevrons, whether Chrome sends click events for web elements, the "trang chưa đổi" line.
+  Not done: real model call, CapCut, record mode, screenshot fallback, default bubble position
+  covering buttons on Home/Settings, `PHONE_CHECKLIST.md` phone line.
