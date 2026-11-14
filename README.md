@@ -54,6 +54,12 @@ the app). Run `python tools/stub/stub_server.py`, then in the app's Settings cho
 `curl "http://localhost:8787/pick?q=<regex>"` chooses which on-screen element it points at.
 
 `bash tools/kill_reopen_test.sh 5` runs the kill-and-reopen check.
+`bash tools/follow_mode_test.sh` checks follow mode (one bubble tap, four guided screens).
+`python tools/make_test_docs.py <dir>` makes a sharp and a blurred sample document photo for
+DocCheck (needs `pip install pillow`, which the stub also uses to measure blur).
+
+**Do not run `adb shell uiautomator dump` while a guide session is active**: it suspends
+accessibility services for as long as it runs. Use screenshots and `adb logcat -s ChiDay`.
 
 ## Team workflow (several laptops, several accounts, one `main`)
 

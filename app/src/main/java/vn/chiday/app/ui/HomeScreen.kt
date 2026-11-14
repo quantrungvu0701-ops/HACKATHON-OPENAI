@@ -65,6 +65,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onOpenVoiceSettings: () -> Unit,
     onOpenDocCheck: () -> Unit,
+    onOpenImport: () -> Unit,
     onStart: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -183,6 +184,13 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).testTag("btn_doccheck"),
             shape = RoundedCornerShape(16.dp),
         ) { Text(stringResource(R.string.home_open_doccheck)) }
+
+        OutlinedButton(
+            onClick = onOpenImport,
+            enabled = aiState != CheckState.MISSING,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("btn_import"),
+            shape = RoundedCornerShape(16.dp),
+        ) { Text(stringResource(R.string.home_open_import)) }
 
         OutlinedButton(
             onClick = onOpenSettings,

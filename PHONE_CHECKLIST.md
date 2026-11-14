@@ -179,6 +179,57 @@ For each target the presenter will show, on the demo phone, on the venue network
 Stop the flow **before** any screen that asks for VNeID, a password or an OTP.
 Re-check the night before: portals change layout without notice.
 
+## 11. Follow mode and a playbook on the real site
+
+1. Chỉ Đây → under "Việc đã có hướng dẫn từng bước" tap **Tìm bưu cục gần nhà** → **Bắt đầu**.
+2. Open Chrome → `vnpost.vn` → tap the orange bubble **once**.
+3. The ring lands on «Tìm Bưu Cục» and the card says "Bước 1/4". Tap the ringed button with
+   your own finger. Without touching the bubble again, the next page gets "Bước 2/4".
+4. Tap the bubble (now green) to end the session: ring and voice stop, bubble turns orange.
+
+```
+adb logcat -s ChiDay
+```
+
+Passes when the log shows `playbook=vnpost-tim-buu-cuc`, two `ring on node` lines and one
+`bubble tap: session started`. Note the `decision ... in N ms` numbers in `PROGRESS.md`.
+
+- [ ] Done
+
+## 12. Screens that protect themselves (Android 12+)
+
+Open Cài đặt → Mạng và Internet → Trình tiết kiệm dữ liệu → Dữ liệu không hạn chế (or any
+banking / VNeID login screen you plan to show) and tap the bubble.
+
+Passes when a ring or "Tôi chưa chắc…" appears. Fails if the card says
+**"Tôi chưa đọc được màn hình này"**: then run `adb logcat -s ChiDay` and look for
+`no app root. windows=...`; a line with `type=1 ... root=null` means that screen refuses
+accessibility services, and it cannot be a demo target.
+
+- [ ] Done
+
+## 13. DocCheck with the real camera
+
+Chỉ Đây → **Kiểm tra ảnh giấy tờ** → **Căn cước** → **Chụp ảnh**.
+
+1. Photograph a card held still in good light: expect "Ảnh dùng được".
+2. Photograph it again while moving the phone, or with a finger over a corner: expect
+   "Ảnh cần chụp lại" with the reason, read aloud.
+
+Use a sample or expired card, or cover the number: the photo is sent to the model provider.
+If the result is an HTTP error mentioning images, the host's model has no vision.
+
+- [ ] Sharp photo passes  - [ ] Bad photo is rejected with a reason
+
+## 14. Which build is on the phone
+
+Home shows **"Bản dựng <commit>"** at the bottom. It must match the commit you expect
+(`git log --oneline -1`). Every laptop and CI sign with the same debug key, so
+`adb install -r` works from any of them; if it fails with
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE` see item 4.
+
+- [ ] Done
+
 ---
 
 ## Differences from the emulator

@@ -2,9 +2,7 @@
   "id": "vnpost-tim-buu-cuc",
   "service": "Bưu điện Việt Nam",
   "match": {
-    "packages": [
-      "com.android.chrome"
-    ],
+    "packages": [],
     "hosts": [
       "vnpost.vn"
     ]

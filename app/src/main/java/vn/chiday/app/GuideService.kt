@@ -73,7 +73,8 @@ class GuideService : AccessibilityService() {
         instance = this
         settings = SettingsStore(this)
         engine = GuideEngine(settings, PlaybookStore(this))
-        highlight = HighlightWindow(this)
+        // Order matters: the highlight window is added first so the bubble stays on top of it.
+        highlight = HighlightWindow(this).also { it.attach() }
         speaker = Speaker(this)
         bubble = BubbleWindow(this, ::onBubbleTap).also { it.show() }
         _running.value = true
@@ -150,7 +151,6 @@ class GuideService : AccessibilityService() {
 
         shown = snap.nodes[result.targetIndex]
         highlight?.showTarget(result.rect, title, body, footer, reply.caution)
-        bubble?.bringToFront()
         bubble?.state = BubbleWindow.State.ACTIVE
 
         // Spoken text: the full sentence, plus the warning before payment / submit / delete.
@@ -165,7 +165,6 @@ class GuideService : AccessibilityService() {
     private fun showMessage(title: String, body: String?, speak: Boolean) {
         shown = null
         highlight?.showMessage(title, body)
-        bubble?.bringToFront()
         bubble?.state = if (sessionActive) BubbleWindow.State.ACTIVE else BubbleWindow.State.IDLE
         if (speak) {
             speaker?.speak(listOfNotNull(title, body).joinToString(". "))
@@ -314,6 +313,7 @@ class GuideService : AccessibilityService() {
 
     private fun teardown() {
         endSession()
+        highlight?.detach()
         highlight = null
         speaker?.shutdown()
         speaker = null

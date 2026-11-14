@@ -172,7 +172,7 @@ def playbook_reply(text):
     steps = []
     for i, ln in enumerate(lines, start=1):
         quoted = re.findall(r"[«\"“']([^»\"”']+)[»\"”']", ln)
-        hint = quoted[0] if quoted else " ".join(ln.split()[-2:])
+        hint = quoted[0] if quoted else ln.split()[-1]
         steps.append({"n": i, "signals": [hint], "do": ln, "target_hint": hint})
     return json.dumps({"id": "ban-nhap", "service": field(text, "SERVICE") or "Dịch vụ",
                        "match": {"packages": [], "hosts": []}, "goal": field(text, "GOAL") or "Làm theo hướng dẫn",

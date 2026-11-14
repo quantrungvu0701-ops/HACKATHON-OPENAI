@@ -68,13 +68,6 @@ class BubbleWindow(
         shown = true
     }
 
-    /** Re-adds the window so it sits above an overlay that was attached after it. */
-    fun bringToFront() {
-        if (!shown) return
-        runCatching { wm.removeViewImmediate(view) }
-        wm.addView(view, lp)
-    }
-
     fun hide() {
         if (!shown) return
         runCatching { wm.removeView(view) }

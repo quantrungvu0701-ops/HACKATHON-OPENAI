@@ -68,6 +68,23 @@
     <string name="doc_time">Trả lời sau %1$d ms</string>
     <string name="doc_photo_description">Ảnh giấy tờ bác vừa chọn</string>
 
+    <!-- Paste instructions -> playbook -->
+    <string name="home_open_import">Tạo hướng dẫn mới từ văn bản</string>
+    <string name="import_title">Tạo hướng dẫn từ văn bản</string>
+    <string name="import_intro">Dán các bước hướng dẫn mà trường học hoặc cơ quan đã gửi. Chỉ Đây chuyển thành hướng dẫn khoanh tròn từng bước trên màn hình.</string>
+    <string name="import_service">Tên dịch vụ</string>
+    <string name="import_host">Địa chỉ trang web</string>
+    <string name="import_goal">Việc cần làm</string>
+    <string name="import_text">Dán các bước hướng dẫn vào đây</string>
+    <string name="import_make">Tạo hướng dẫn</string>
+    <string name="import_working">Đang đọc văn bản…</string>
+    <string name="import_draft_title">Bản nháp: %1$d bước</string>
+    <string name="import_step_target">Bấm vào: «%1$s»</string>
+    <string name="import_review_note">Bản nháp chưa kiểm chứng. Hãy đọc lại từng bước trước khi lưu.</string>
+    <string name="import_save">Lưu hướng dẫn này</string>
+    <string name="import_mine">Hướng dẫn đã lưu trên máy này (bấm để xóa)</string>
+    <string name="import_delete">Xóa: %1$s</string>
+
     <!-- Settings -->
     <string name="settings_back">‹ Quay lại</string>
     <string name="settings_title">Cài đặt kết nối AI</string>

@@ -179,3 +179,47 @@ at with `curl "http://localhost:8787/pick?q=<regex>"`.
   without a crash; a real camera capture was not run. **The stub decides by measuring
   sharpness (needs `pip install pillow`); it proves the plumbing, not the model's judgement.**
   The host's model must accept images for this feature: check it with the real key.
+- **M10, first half (2026-11-14) PASS on emulator against the dev stub.** Home > "Tạo hướng
+  dẫn mới từ văn bản": service name, website, goal, pasted steps -> one model call
+  (`PlaybookDrafter`) -> draft shown step by step for review -> "Lưu hướng dẫn này" writes
+  `filesDir/playbooks/<id>.json` (never marked verified). The running service picks it up
+  at once (shared cache), the goal appears on Home, and the guide used it on chinhphu.vn
+  with "chưa kiểm chứng" on the card. Saved drafts can be deleted from the same screen.
+  The stub turns each line into one step; how well a real model converts a real 12-step
+  guide is untested. **Record mode (second half of M10) is not built.**
+- **Emulator hang, seen once (2026-11-14).** After about 5 hours of continuous use the
+  emulator showed "Chỉ Đây isn't responding" twice in a row. The ANR trace
+  (`/data/anr/anr_2026-11-14-07-42-19-931`) has the app's main thread waiting in
+  `HardwareRenderer.setStopped` for the RenderThread, and the RenderThread blocked in
+  `eglCreateWindowSurface -> egl_window_surface_t::init -> qemu_pipe_read`, i.e. inside the
+  emulator's host-GPU pipe, not in app code. A cold restart of the emulator cleared it and it
+  did not come back in the regressions below. A real phone has no qemu pipe, but the app was
+  creating more window surfaces than needed, so that was reduced anyway:
+  `HighlightWindow` is now attached once (before the bubble, so the bubble stays on top) and
+  only toggles visibility; the bubble is no longer removed and re-added for every ring.
+  If the emulator hangs again: `adb emu kill`, start it again, and close Chrome tabs.
+- **Regression on the final build, fresh emulator (2026-11-14):**
+  `tools/follow_mode_test.sh` PASS (4 rings, 1 bubble tap, 3 automatic re-analyses);
+  `tools/kill_reopen_test.sh 3` 3/3; both vnpost playbooks and the pasted-draft flow ran
+  as described above; DocCheck sharp/blurred verdicts as in M9.
+
+## State after milestones 7 to 10 (before the phone arrives)
+
+Built and passing on the emulator: everything in milestones 1 to 9 and the paste-to-playbook
+half of 10. Still true from the list above: **no real model has been called and nothing has
+run on a real phone.** Not built: record mode, screenshot fallback for apps with an empty
+accessibility tree, the self-building map (MECHANISM section 6).
+
+Order of work when the phone and the host's key arrive:
+1. PHONE_CHECKLIST.md items 1 to 10, then 11 to 14.
+2. With the real key: "Kiểm tra kết nối"; then one bubble tap on vnpost.vn with the goal
+   "Tìm bưu cục gần nhà". Watch `adb logcat -s ChiDay`: `decision ... in N ms` is the latency,
+   and `ring on node` shows what the model picked. If the model's JSON does not parse, the
+   log says `guide reply did not parse` with the reason.
+3. If the model is slow (target: under 3 s per step) the first knobs are in the app, not the
+   prompt: `ScreenReader.MAX_NODES` (150) and the playbook JSON sent with every call.
+4. If the host's model has no vision, DocCheck fails with the provider's HTTP error on
+   screen; say so in the demo instead of faking it.
+5. Pick the two or three demo targets and re-verify their playbooks on the phone the night
+   before (checklist item 10). dichvucong.gov.vn needs a playbook written from its real
+   screens once it is reachable: open it, tap the bubble, read the `node` lines in logcat.

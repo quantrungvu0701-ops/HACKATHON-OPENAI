@@ -16,9 +16,6 @@ class PlaybookStore(context: Context) {
     private val app = context.applicationContext
     private val userDir = File(app.filesDir, DIR)
 
-    @Volatile
-    private var cache: List<Playbook>? = null
-
     fun all(): List<Playbook> = cache ?: load().also { cache = it }
 
     fun userPlaybookIds(): Set<String> =
@@ -80,6 +77,10 @@ class PlaybookStore(context: Context) {
 
     companion object {
         private const val TAG = "ChiDay"
+
+        /** Shared by the activity and the service (same process): a save in one is seen by the other. */
+        @Volatile
+        private var cache: List<Playbook>? = null
         const val DIR = "playbooks"
         val JSON = Json { ignoreUnknownKeys = true; isLenient = true; coerceInputValues = true; explicitNulls = false }
         val PRETTY = Json { prettyPrint = true; explicitNulls = false; encodeDefaults = false }

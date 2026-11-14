@@ -48,16 +48,36 @@ class HighlightWindow(private val service: AccessibilityService) {
     }
 
     /** True while a target ring is on screen. */
-    val isShowingTarget: Boolean get() = attached && view.target != null
+    val isShowingTarget: Boolean get() = isShowing && view.target != null
 
-    val isShowing: Boolean get() = attached
+    val isShowing: Boolean get() = attached && view.visibility == View.VISIBLE
+
+    /**
+     * Adds the window once, hidden. It is attached BEFORE the bubble so the bubble always sits
+     * above it, and it then stays attached for the life of the service: showing and hiding only
+     * toggles visibility. Adding and removing windows on every step made the render thread
+     * create a new surface each time, for this window and for the re-added bubble.
+     */
+    fun attach() {
+        if (attached) return
+        view.visibility = View.GONE
+        wm.addView(view, lp)
+        attached = true
+    }
+
+    fun detach() {
+        if (!attached) return
+        runCatching { wm.removeViewImmediate(view) }
+        attached = false
+        view.target = null
+    }
 
     /** Ring [target] (absolute screen pixels, from getBoundsInScreen) and show the card. */
     fun showTarget(target: Rect, title: String, body: String?, footer: String?, caution: Boolean) {
         view.target = Rect(target)
         view.caution = caution
         view.setCard(title, body, footer)
-        attach()
+        reveal()
     }
 
     /** Card only, no ring: "not sure", errors. */
@@ -65,7 +85,7 @@ class HighlightWindow(private val service: AccessibilityService) {
         view.target = null
         view.caution = false
         view.setCard(title, body, null)
-        attach()
+        reveal()
     }
 
     /** Follow a target that moved (the user scrolled) without redoing the model call. */
@@ -76,19 +96,14 @@ class HighlightWindow(private val service: AccessibilityService) {
     }
 
     fun hide() {
-        if (!attached) return
-        runCatching { wm.removeView(view) }
-        attached = false
         view.target = null
+        if (attached) view.visibility = View.GONE
     }
 
-    private fun attach() {
-        if (attached) {
-            view.invalidate()
-        } else {
-            wm.addView(view, lp)
-            attached = true
-        }
+    private fun reveal() {
+        attach()
+        view.visibility = View.VISIBLE
+        view.invalidate()
     }
 
     private class HighlightView(context: Context) : View(context) {
