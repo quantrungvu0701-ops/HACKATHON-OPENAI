@@ -168,3 +168,14 @@ at with `curl "http://localhost:8787/pick?q=<regex>"`.
   (5) When no app window can be read the log prints every window's type and root under tag
   `ChiDay` ("no app root. windows=..."): first thing to check if the phone shows
   "Tôi chưa đọc được màn hình này".
+- **M9 (2026-11-14) PASS on emulator against the dev stub; real vision model untested.**
+  DocCheck screen (Home > "Kiểm tra ảnh giấy tờ"): pick the kind (Căn cước / Ảnh chân dung /
+  Giấy tờ khác), "Chụp ảnh" (camera app via FileProvider, no camera permission) or "Chọn ảnh
+  có sẵn" (system photo picker, no storage permission). The photo is rotated per EXIF, scaled
+  to 1568 px, sent as JPEG with the prompt in `DocChecker`, and the verdict
+  (`{ok, document, problems, advice}`) is shown above the photo and read aloud. With
+  `tools/make_test_docs.py` photos: sharp one "Ảnh dùng được", blurred one "Ảnh cần chụp lại:
+  Ảnh bị mờ, chữ không đọc được" + advice. "Chụp ảnh" opens the emulator camera and returns
+  without a crash; a real camera capture was not run. **The stub decides by measuring
+  sharpness (needs `pip install pillow`); it proves the plumbing, not the model's judgement.**
+  The host's model must accept images for this feature: check it with the real key.

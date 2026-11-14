@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import vn.chiday.app.ui.ChiDayTheme
+import vn.chiday.app.ui.DocCheckScreen
 import vn.chiday.app.ui.HomeScreen
 import vn.chiday.app.ui.SettingsScreen
 
@@ -33,12 +34,18 @@ class MainActivity : ComponentActivity() {
                         SettingsScreen(onBack = { screen = SCREEN_HOME })
                     }
 
+                    SCREEN_DOCCHECK -> {
+                        BackHandler { screen = SCREEN_HOME }
+                        DocCheckScreen(onBack = { screen = SCREEN_HOME })
+                    }
+
                     else -> HomeScreen(
                         resumeTick = resumeTick,
                         onOpenAccessibility = ::openAccessibilitySettings,
                         onOpenAppInfo = ::openAppInfo,
                         onOpenSettings = { screen = SCREEN_SETTINGS },
                         onOpenVoiceSettings = ::openVoiceSettings,
+                        onOpenDocCheck = { screen = SCREEN_DOCCHECK },
                         onStart = { moveTaskToBack(true) },
                     )
                 }
@@ -78,5 +85,6 @@ class MainActivity : ComponentActivity() {
     private companion object {
         const val SCREEN_HOME = "home"
         const val SCREEN_SETTINGS = "settings"
+        const val SCREEN_DOCCHECK = "doccheck"
     }
 }

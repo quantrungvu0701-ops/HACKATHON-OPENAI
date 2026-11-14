@@ -64,6 +64,7 @@ fun HomeScreen(
     onOpenAppInfo: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenVoiceSettings: () -> Unit,
+    onOpenDocCheck: () -> Unit,
     onStart: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -175,6 +176,13 @@ fun HomeScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        OutlinedButton(
+            onClick = onOpenDocCheck,
+            enabled = aiState != CheckState.MISSING,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).testTag("btn_doccheck"),
+            shape = RoundedCornerShape(16.dp),
+        ) { Text(stringResource(R.string.home_open_doccheck)) }
 
         OutlinedButton(
             onClick = onOpenSettings,

@@ -52,6 +52,22 @@
     <string name="guide_unverified">chưa kiểm chứng</string>
     <string name="guide_caution">Bác kiểm tra kỹ thông tin trước khi bấm.</string>
 
+    <!-- Document photo check -->
+    <string name="home_open_doccheck">Kiểm tra ảnh giấy tờ</string>
+    <string name="doc_title">Kiểm tra ảnh giấy tờ</string>
+    <string name="doc_intro">Chụp hoặc chọn ảnh giấy tờ. Chỉ Đây xem ảnh có rõ, đủ bốn góc, không lóa không, để hồ sơ của bác không bị trả lại.</string>
+    <string name="doc_kind_id">Căn cước</string>
+    <string name="doc_kind_portrait">Ảnh chân dung</string>
+    <string name="doc_kind_other">Giấy tờ khác</string>
+    <string name="doc_take">Chụp ảnh</string>
+    <string name="doc_pick">Chọn ảnh có sẵn</string>
+    <string name="doc_working">Đang xem ảnh…</string>
+    <string name="doc_ok_title">Ảnh dùng được</string>
+    <string name="doc_bad_title">Ảnh cần chụp lại</string>
+    <string name="doc_detected">Loại giấy tờ: %1$s</string>
+    <string name="doc_time">Trả lời sau %1$d ms</string>
+    <string name="doc_photo_description">Ảnh giấy tờ bác vừa chọn</string>
+
     <!-- Settings -->
     <string name="settings_back">‹ Quay lại</string>
     <string name="settings_title">Cài đặt kết nối AI</string>
