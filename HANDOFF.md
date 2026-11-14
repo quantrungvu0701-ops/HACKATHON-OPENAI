@@ -61,3 +61,4 @@ before every push.
 - Same-screen steps: after a press on the ring, if the playbook's next step is on the same screen the guide re-analyses after 1.5 s (`GuideEngine.nextStepIsHere`). Untested on a real app.
 - Follow mode no longer cancels a model call in flight; the answer is placed on the fresh screen. Goal of another service no longer overrides the playbook of the app on screen. Both checked on the emulator with gpt-4.1 on vnpost.vn.
 - dichvucong.gov.vn does not load from the dev computer's network: check that flow on the phone only.
+- Model calls: 7 s timeout + one retry on a fresh connection, HTTP/2 pings, warm-up on service start and «Bắt đầu». kill_reopen_test 4/5 with gpt-4.1 on the emulator.

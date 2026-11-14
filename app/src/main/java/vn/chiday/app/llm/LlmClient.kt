@@ -32,11 +32,26 @@ object Llm {
         .writeTimeout(60, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
         .callTimeout(120, TimeUnit.SECONDS)
+        // A pooled connection can die silently while idle (NAT, mobile networks). HTTP/2 pings
+        // find that out in seconds instead of waiting for the read timeout.
+        .pingInterval(4, TimeUnit.SECONDS)
         .build()
 
     fun clientFor(settings: LlmSettings): LlmClient = when (settings.provider) {
         Provider.ANTHROPIC -> AnthropicClient(settings.baseUrl, settings.model, settings.apiKey)
         Provider.OPENAI, Provider.GEMINI -> OpenAiCompatClient(settings.baseUrl, settings.model, settings.apiKey)
+    }
+
+    /**
+     * Opens (and keeps in the pool) a connection to the model server, so the first guide call
+     * after the app is reopened does not pay for DNS and the TLS handshake. Errors are ignored.
+     */
+    fun warmUp(baseUrl: String) {
+        val request = runCatching { Request.Builder().url(baseUrl.trimEnd('/') + "/models").head().build() }.getOrNull() ?: return
+        http.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {}
+            override fun onResponse(call: Call, response: Response) = response.close()
+        })
     }
 
     /** Runs the request, cancels the socket if the coroutine is cancelled, returns the body of a 2xx. */

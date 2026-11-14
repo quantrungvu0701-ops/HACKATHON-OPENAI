@@ -69,10 +69,10 @@ for i in $(seq 1 "$ROUNDS"); do
   if adb logcat -d -s ChiDay | grep -q "session ended"; then
     c=$(bubble_centre); adb logcat -c; adb shell input tap $c
   fi
-  sleep 7   # a real model answers in 1-4 s
+  sleep 12  # a real model answers in 1-4 s; a dead connection costs one 7 s retry
   log=$(adb logcat -d -s ChiDay)
   [ -n "$SHOTS" ] && adb exec-out screencap -p > "$SHOTS/m6_ring_$i.png"
-  ring=$(echo "$log" | grep -c "ring on node|move towards")   # a ring, or a "scroll first" card
+  ring=$(echo "$log" | grep -c -e "ring on node" -e "move towards")   # a ring, or a "scroll first" card
   speech=$(echo "$log" | grep -c "speech started")
   overlay=$(adb shell dumpsys window windows | grep -c "ChiDayHighlight, frame\|Window{.*ChiDayHighlight}")
   # 4. End the session so the next round starts clean.

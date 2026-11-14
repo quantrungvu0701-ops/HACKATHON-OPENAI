@@ -122,7 +122,16 @@ class GuideService : AccessibilityService() {
         bubble = BubbleWindow(this, ::onBubbleTap, ::onBubbleHold)
         applyBubbleSwitch()
         _running.value = true
+        warmUpModel()
         Log.i(TAG, "service connected, bubble ${if (_bubbleOn.value) "shown" else "off"}")
+    }
+
+    /** Connects to the model server ahead of the first tap (after a reopen, after "Bắt đầu"). */
+    private fun warmUpModel() {
+        scope.launch {
+            val s = settings.current()
+            if (s.isComplete) vn.chiday.app.llm.Llm.warmUp(s.baseUrl)
+        }
     }
 
     /** Press and hold on the bubble: switch it off and say how to get it back. */
@@ -622,6 +631,7 @@ class GuideService : AccessibilityService() {
             bubblePrefs(context).edit().putBoolean(KEY_BUBBLE_ON, on).apply()
             _bubbleOn.value = on
             instance?.applyBubbleSwitch()
+            if (on) instance?.warmUpModel()
         }
 
         /** True when the user has switched the service on in Settings. */

@@ -142,7 +142,8 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
             val client = Llm.clientFor(s)
             kotlinx.coroutines.withTimeoutOrNull(CALL_TIMEOUT_MS) { client.complete(SYSTEM_PROMPT, message) }
                 ?: run {
-                    Log.w(TAG, "model call took over ${CALL_TIMEOUT_MS / 1000}s: trying once more")
+                    Log.w(TAG, "model call took over ${CALL_TIMEOUT_MS / 1000}s: trying once more on a fresh connection")
+                    Llm.http.connectionPool.evictAll()
                     kotlinx.coroutines.withTimeoutOrNull(CALL_TIMEOUT_MS) { client.complete(SYSTEM_PROMPT, message) }
                 }
                 ?: return GuideResult.Failed("model call timed out twice")
@@ -212,7 +213,7 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
     companion object {
         private const val TAG = "ChiDay"
         const val MIN_CONFIDENCE = 0.5
-        const val CALL_TIMEOUT_MS = 10_000L
+        const val CALL_TIMEOUT_MS = 7_000L
 
         // Prompt contract from AGENTS.md. English instructions, Vietnamese output.
         const val SYSTEM_PROMPT =
