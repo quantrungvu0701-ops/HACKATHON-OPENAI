@@ -20,6 +20,8 @@ data class UiNode(
     val hint: String? = null,
     val id: String? = null,
     val clickable: Boolean? = null,
+    /** Input fields only: whether the user has typed something. The typed text itself is never read. */
+    val filled: Boolean? = null,
     val bounds: List<Int>,
 )
 
@@ -39,6 +41,8 @@ class ScreenSnapshot(
     val screen: Rect,
     /** Bounds as the tree reports them, not clipped to the screen: tells a cut-off element from a whole one. */
     val fullRects: List<Rect> = rects,
+    /** Input fields and secret nodes on screen; painted black in any screenshot. */
+    val redactRects: List<Rect> = emptyList(),
 ) {
     /** Layout-independent fingerprint used to skip re-analysing an unchanged screen. */
     val hash: Int by lazy {
@@ -48,6 +52,7 @@ class ScreenSnapshot(
             h = 31 * h + (n.text?.hashCode() ?: 0)
             h = 31 * h + (n.desc?.hashCode() ?: 0)
             h = 31 * h + (n.id?.hashCode() ?: 0)
+            h = 31 * h + (n.filled?.hashCode() ?: 0)
         }
         h
     }
@@ -67,7 +72,6 @@ object ScreenReader {
     private const val MAX_NODES = 150
     private const val MAX_VISITED = 4000
     private const val MAX_TEXT = 80
-    private val LONG_DIGITS = Regex("\\d{6,}")
 
     /** Icon-font glyphs (private-use area) and zero-width characters that sites put in labels. */
     private val JUNK = Regex("[\\uE000-\\uF8FF\\u200B-\\u200F\\uFEFF]")
@@ -89,7 +93,7 @@ object ScreenReader {
             !walker.sawUrlBar && last != null && last.first == pkg -> last.second
             else -> null
         }
-        return ScreenSnapshot(pkg, host, walker.nodes, walker.rects, Rect(screen), walker.fullRects)
+        return ScreenSnapshot(pkg, host, walker.nodes, walker.rects, Rect(screen), walker.fullRects, walker.redact)
     }
 
     /** (browser package, host) from the last read that showed the browser's address bar. */
@@ -125,6 +129,7 @@ object ScreenReader {
         val nodes = ArrayList<UiNode>()
         val rects = ArrayList<Rect>()
         val fullRects = ArrayList<Rect>()
+        val redact = ArrayList<Rect>()
         var host: String? = null
         var sawUrlBar = false
         private var visited = 0
@@ -155,13 +160,19 @@ object ScreenReader {
             val id = node.viewIdResourceName
             val editable = node.isEditable
             val clickable = node.isClickable || node.isCheckable
-            var text = if (node.isPassword) null else clean(node.text)
+            val secret = PrivacyFilter.isSecret(node)
+            if (onScreen && PrivacyFilter.shouldRedact(node)) redact += Rect(r).apply { intersect(screen) }
+            // Privacy: never read what the user typed into an input field, nor anything in a
+            // password/PIN/OTP field. Only "filled or empty" and the field's label are kept.
+            var text = if (editable || secret) null else clean(node.text)
+            val filled = if (editable) PrivacyFilter.isFilled(node) else null
             // Web links with no text expose their href as the description: useless to the model.
-            val desc = clean(node.contentDescription)?.takeIf { !it.startsWith("javascript:") }
+            val desc = if (secret) null else clean(node.contentDescription)?.takeIf { !it.startsWith("javascript:") }
             val hint = clean(node.hintText)?.takeIf { it != text }
 
             if (id != null && host == null && BROWSER_URL_BAR_IDS.any { id.endsWith(it) }) {
                 sawUrlBar = true
+                // Only the site's host name is kept from the address bar, never the full URL.
                 host = hostOf(node.text?.toString())
             }
 
@@ -206,6 +217,7 @@ object ScreenReader {
                     hint = hint,
                     id = id?.substringAfter(":id/")?.takeIf { it.isNotBlank() },
                     clickable = if (clickable) true else null,
+                    filled = filled,
                     bounds = listOf(r.left, r.top, r.right, r.bottom),
                 )
                 rects += Rect(r)
@@ -232,7 +244,8 @@ object ScreenReader {
                 val child = node.getChild(c) ?: continue
                 if (!child.isVisibleToUser) continue
                 if (child.isClickable || child.isEditable || child.isCheckable) return false
-                val label = (if (child.isPassword) null else clean(child.text)) ?: clean(child.contentDescription)
+                if (PrivacyFilter.isSecret(child)) return false
+                val label = clean(child.text) ?: clean(child.contentDescription)
                 if (label != null) {
                     if (out.size >= 4) return false
                     out += label
@@ -261,12 +274,12 @@ object ScreenReader {
         }
     }
 
-    /** Privacy filter: trims, collapses whitespace, masks digit runs of 6 or more. */
+    /** Trims, collapses whitespace, and masks personal numbers and e-mails (see [PrivacyFilter]). */
     internal fun clean(cs: CharSequence?): String? {
         if (cs.isNullOrBlank()) return null
         val s = cs.toString().replace(JUNK, "").replace(Regex("\\s+"), " ").trim()
         if (s.isEmpty()) return null
-        val masked = LONG_DIGITS.replace(s) { "•".repeat(6) }
+        val masked = PrivacyFilter.maskText(s)
         return if (masked.length > MAX_TEXT) masked.take(MAX_TEXT - 1) + "…" else masked
     }
 

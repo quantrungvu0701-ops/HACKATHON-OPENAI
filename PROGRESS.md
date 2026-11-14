@@ -328,3 +328,4 @@ Order of work when the phone and the host's key arrive:
   chevrons, whether Chrome sends click events for web elements, the "trang chưa đổi" line.
   Not done: real model call, CapCut, record mode, screenshot fallback, default bubble position
   covering buttons on Home/Settings, `PHONE_CHECKLIST.md` phone line.
+- feat/privacy-filter (not merged): input fields send only filled/empty, never typed text; password/PIN/OTP/card fields fully hidden; phone/ID/account numbers (also spaced) and e-mails masked; PrivacyFilter.captureRedacted blacks out input fields in memory before any screenshot is encoded (no caller yet, untested on device); DocCheck camera photo deleted from cache after use. tools/privacy_filter_test.sh PASS on emulator.
