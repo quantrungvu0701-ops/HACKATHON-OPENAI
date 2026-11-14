@@ -2,18 +2,14 @@
 
 **Kết luận về thời gian:** 3 use case live KHÔNG vừa 5 phút (dịch vụ công ~60 s, CapCut ~90 s, VNPost cần mã bưu gửi + captcha). Demo live **1 case: Dịch vụ công**. VNPost và CapCut chỉ nói ở slide 6 (và mở CapCut live nếu còn ≥ 40 s).
 
-| Thời gian | Slide | Người nói làm gì |
+| Thời gian | Slide | Nói gì |
 |---|---|---|
-| 0:00–0:20 | 1 Hook | "Đây là mẹ tôi / bà tôi trên Cổng Dịch vụ công. Bà hỏi: bấm vào đâu?" |
-| 0:20–0:50 | 2 Người dùng | 14,2 triệu người 60+; thủ tục đã lên mạng; họ phải nhờ con cháu. |
-| 0:50–1:15 | 3 Vấn đề | 15 kết quả gần giống nhau; nút ẩn; bấm nhầm Nộp/Thanh toán. |
-| 1:15–1:35 | 4 Giải pháp | Một nút → AI khoanh + đọc to → tự sang bước; không bấm hộ. |
-| 1:35–4:00 | 5 Demo LIVE | xem bên dưới |
-| 4:00–4:25 | 6 Một app, mọi dịch vụ | VNPost, CapCut 6 bước, riêng tư. |
-| 4:25–4:50 | 7 Người dùng đầu tiên | CLB người cao tuổi, bình dân học vụ số, B2B ngân hàng/nhà mạng. |
-| 4:50–5:00 | 8 Kết | "Không ai bị bỏ lại khi mọi thứ lên mạng." |
+| 0:00–0:40 | 1 Bấm vào đâu? | 14,2 triệu người 60+ phải làm thủ tục online; và ai cũng có lúc lạc (CapCut, tra bưu gửi). |
+| 0:40–1:00 | 2 Chỉ Đây | Một nút → AI khoanh + đọc to → tự sang bước; không bấm hộ. |
+| 1:00–4:20 | 3 Demo LIVE | Dịch vụ công đầy đủ; còn giờ thì CapCut. |
+| 4:20–5:00 | 4 Người dùng đầu tiên | Gia đình, CLB người cao tuổi, bình dân học vụ số; ngân hàng/nhà mạng trả phí; toàn cầu đổi ngôn ngữ. |
 
-## Demo live (2 phút 25)
+## Demo live (3 phút 20)
 Chiếu màn hình điện thoại (Samsung Smart View / cáp HDMI) — BGK phải thấy điện thoại thật.
 1. **(0:00)** Mở đa nhiệm, vuốt tắt Chỉ Đây. Nói: "Tôi đóng hẳn app."
 2. **(0:10)** Mở lại Chỉ Đây từ màn hình chính → "Sẵn sàng" ✓. Chọn "Xem cần giấy tờ gì để xin bản sao Giấy khai sinh".

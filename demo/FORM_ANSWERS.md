@@ -19,7 +19,7 @@ Copy từng mục vào form. Chỗ có `<...>` là thông tin chỉ đội biế
 
 **Người dùng, vấn đề và bằng chứng / Users, problem, and evidence**
 
-Chỉ Đây dành cho người lớn tuổi và người chưa quen điện thoại ở Việt Nam, những người phải tự làm thủ tục công và việc thường ngày trên app/web (Cổng Dịch vụ công, Bưu điện, chỉnh video gửi con cháu…) nhưng không biết bấm vào đâu.
+Chỉ Đây dành cho bất kỳ ai bị lạc trong một app/web khó hiểu: trước hết là người lớn tuổi và người chưa quen điện thoại phải tự làm thủ tục công, nhưng cũng là người trẻ lần đầu làm một việc lạ (cắt video trong CapCut, tra bưu gửi, nộp hồ sơ trực tuyến) mà không biết bấm vào đâu.
 - Việt Nam có khoảng 14,2 triệu người từ 60 tuổi trở lên (Tổng cục Thống kê, 2024), dự kiến 18 triệu vào 2030. Đồng thời thủ tục hành chính đang chuyển mạnh sang trực tuyến (dichvucong.gov.vn, VNeID).
 - Khó khăn thật: giao diện chữ nhỏ, nhiều nút giống nhau, thuật ngữ hành chính; người dùng phải nhờ con cháu hoặc ra quầy, mất thời gian, dễ bấm nhầm nút nộp/thanh toán.
 - Bằng chứng nhóm tự kiểm tra hôm nay: để xem "cần giấy tờ gì để xin bản sao Giấy khai sinh" trên dichvucong.gov.vn phải đi qua ô tìm kiếm không có nhãn, chọn đúng 1 trong 15 kết quả gần giống nhau ("Cấp bản sao…" vs "Đăng ký khai sinh…") rồi kéo xuống tận mục "Thành phần hồ sơ". Trong CapCut, nút "Tách" (Split) bị ẩn sau nút "Edit"; trang vnpost.vn có banner chạy liên tục làm khó nhìn.
