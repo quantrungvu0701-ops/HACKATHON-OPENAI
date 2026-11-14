@@ -409,7 +409,7 @@ class HighlightWindow(private val service: AccessibilityService) {
             if (t != null) {
                 val pad = 8f * d
                 val k = RectF(t.left - origin[0] - pad, t.top - origin[1] - pad, t.right - origin[0] + pad, t.bottom - origin[1] + pad)
-                val small = k.width() < SMALL_DP * d || k.height() < SMALL_DP * d
+                val small = min(k.width(), k.height()) < SMALL_DP * d && max(k.width(), k.height()) < 3 * SMALL_DP * d
                 val cx = k.centerX()
                 val cy = k.centerY()
                 val tip = max(k.width(), k.height()) / 2f + 14f * d
@@ -506,7 +506,7 @@ class HighlightWindow(private val service: AccessibilityService) {
                 canvas.drawRoundRect(hole, radius + grow, radius + grow, ring)
                 hole.inset(grow, grow)
 
-                if (hole.width() < SMALL_DP * d || hole.height() < SMALL_DP * d) drawArrow(canvas, accent, phase)
+                if (min(hole.width(), hole.height()) < SMALL_DP * d && max(hole.width(), hole.height()) < 3 * SMALL_DP * d) drawArrow(canvas, accent, phase)
             }
 
             if (t == null && moveDir != 0) drawMoveHint(canvas, accent)

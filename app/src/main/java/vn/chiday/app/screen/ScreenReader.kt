@@ -22,6 +22,8 @@ data class UiNode(
     val clickable: Boolean? = null,
     /** Input fields only: whether the user has typed something. The typed text itself is never read. */
     val filled: Boolean? = null,
+    /** Input fields only: true when the cursor is in this field (the user has already tapped it). */
+    val focused: Boolean? = null,
     val bounds: List<Int>,
 )
 
@@ -29,6 +31,8 @@ data class UiNode(
 data class ScreenPayload(
     @SerialName("package") val pkg: String,
     val host: String? = null,
+    /** True while the on-screen keyboard is open. */
+    val keyboard: Boolean? = null,
     val nodes: List<UiNode>,
 )
 
@@ -43,6 +47,8 @@ class ScreenSnapshot(
     val fullRects: List<Rect> = rects,
     /** Input fields and secret nodes on screen; painted black in any screenshot. */
     val redactRects: List<Rect> = emptyList(),
+    /** The on-screen keyboard is open: the user is expected to type, not to tap a field again. */
+    val keyboard: Boolean = false,
 ) {
     /** Layout-independent fingerprint used to skip re-analysing an unchanged screen. */
     val hash: Int by lazy {
@@ -53,6 +59,8 @@ class ScreenSnapshot(
             h = 31 * h + (n.desc?.hashCode() ?: 0)
             h = 31 * h + (n.id?.hashCode() ?: 0)
             h = 31 * h + (n.filled?.hashCode() ?: 0)
+            // Tapping a field only moves the cursor into it: that is progress, so it counts.
+            h = 31 * h + (n.focused?.hashCode() ?: 0)
         }
         h
     }
@@ -72,7 +80,7 @@ class ScreenSnapshot(
             }
             nodes.filter { it.i in keep }
         }
-        return JSON.encodeToString(ScreenPayload(pkg, host, sent))
+        return JSON.encodeToString(ScreenPayload(pkg, host, if (keyboard) true else null, sent))
     }
 
     private companion object {
@@ -110,7 +118,8 @@ object ScreenReader {
             !walker.sawUrlBar && last != null && last.first == pkg -> last.second
             else -> null
         }
-        return ScreenSnapshot(pkg, host, walker.nodes, walker.rects, Rect(screen), walker.fullRects, walker.redact)
+        val keyboard = runCatching { service.windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD } }.getOrDefault(false)
+        return ScreenSnapshot(pkg, host, walker.nodes, walker.rects, Rect(screen), walker.fullRects, walker.redact, keyboard)
     }
 
     /** (browser package, host) from the last read that showed the browser's address bar. */
@@ -235,6 +244,7 @@ object ScreenReader {
                     id = id?.substringAfter(":id/")?.takeIf { it.isNotBlank() },
                     clickable = if (clickable) true else null,
                     filled = filled,
+                    focused = if (editable && node.isFocused) true else null,
                     bounds = listOf(r.left, r.top, r.right, r.bottom),
                 )
                 rects += Rect(r)

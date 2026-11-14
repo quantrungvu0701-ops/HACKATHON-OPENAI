@@ -92,6 +92,9 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
     /** Set when the user pressed the ringed target and the screen stayed: told to the model once. */
     private var userActed = false
 
+    /** Without a playbook: the step number shown last, so a finished step is never shown again. */
+    private var freeStepN: Int? = null
+
     /**
      * True when the playbook's next step happens on this same screen (CapCut: split, split
      * again, delete all sit on the editor). After a press on the ring the guide then moves on
@@ -119,6 +122,7 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
 
     fun resetSession() {
         lastStep = null
+        freeStepN = null
         lastStepN = null
         lastStepShown = 0
         pressesOnStep = 0
@@ -185,6 +189,7 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         }
 
         // The model has seen USER_ACTION: only now is it consumed (a failed or cancelled call keeps it).
+        val acted = userActed
         userActed = false
         var reply = parse(raw) ?: return GuideResult.NotSure("unparseable reply: ${raw.take(120)}")
         val floor = lastStepN
@@ -196,6 +201,17 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
             val fixed = likely?.n?.takeIf { it >= floor } ?: floor
             Log.i(TAG, "model went back to step $said after $floor: kept step $fixed")
             reply = reply.copy(step = fixed)
+        }
+        if (playbook == null) {
+            // No playbook: the model numbers the steps itself and tends to say "step 1" again.
+            // Keep the count moving forward: one more each time the user has done the last step.
+            val before = freeStepN
+            val n = when {
+                before == null -> (reply.step ?: 1).coerceAtLeast(1)
+                acted -> maxOf(reply.step ?: 0, before + 1)
+                else -> maxOf(reply.step ?: 0, before)
+            }
+            reply = reply.copy(step = n, totalSteps = reply.totalSteps?.let { maxOf(it, n) })
         }
         if (playbook != null) {
             // The playbook, not the model, is the authority on length and on which steps are risky.
@@ -212,6 +228,7 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         val result = place(reply, snapshot, scrollStep, towards, verified = playbook?.verified != null)
         if (result is GuideResult.Show || result is GuideResult.Move) {
             lastStep = reply.subtitle ?: reply.say
+            if (playbook == null) freeStepN = reply.step
             if (playbook != null) {
                 val n = reply.step ?: lastStepN
                 lastStepShown = if (n == lastStepN) lastStepShown + 1 else 1
@@ -244,7 +261,7 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         append("GOAL: ").append(g ?: "not stated; choose the most likely next step on this screen").append('\n')
         append("LAST_STEP: ").append(lastStep ?: "none").append('\n')
         if (userActed) {
-            append("USER_ACTION: the user has just pressed the target of the last step and the screen stayed the same; continue with the step after it\n")
+            append("USER_ACTION: the user has just done LAST_STEP (pressed its target). Do NOT give that instruction again; continue with what comes after it\n")
         }
         if (playbook == null) {
             append("PLAYBOOK: none\n")
@@ -323,6 +340,11 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
                 "If what the user needs is not on screen yet, or the step is only to scroll or read, " +
                 "set action=\"scroll\", tell the user which way to move the screen, do not say " +
                 "\"bấm\", and set target to the element to read if it is visible, else null. " +
+                "\"focused\": true on an input field means the user has ALREADY tapped it and the cursor is " +
+                "in it; \"keyboard\": true means the keyboard is open. Then never tell the user to tap " +
+                "that field again: set action=\"type\", target that field, and tell them exactly what " +
+                "words to type on the keyboard and which key to press after (the magnifier or Enter key). " +
+                "If that field is already \"filled\", point at the search/submit button or the result to press instead. " +
                 "For privacy, input fields never show what the user typed: \"filled\": true means " +
                 "the field already has something in it, false means it is empty. Masked values " +
                 "(••••••, [email]) are hidden personal data: never ask the user to read them out. " +
@@ -365,6 +387,12 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
             if (confidence != null && confidence < MIN_CONFIDENCE) return GuideResult.NotSure("confidence $confidence")
             if (reply.say.isNullOrBlank() && reply.subtitle.isNullOrBlank()) return GuideResult.NotSure("no instruction text")
 
+            // A field the cursor is already in is in use right now: ring it as it is. The
+            // cover check misfires here (launcher search draws its input row over stale items).
+            if (target != null && snapshot.nodes[target].focused == true) {
+                return GuideResult.Show(reply, target, Rect(snapshot.rects[target]), verified)
+            }
+
             // The model chose; geometry decides whether a finger can land there (TargetResolver).
             val boxes = snapshot.nodes.mapIndexed { i, n ->
                 val r = snapshot.fullRects[i]
@@ -386,6 +414,6 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         fun sameElement(a: UiNode, b: UiNode) =
             // "filled" counts: typed text is never read (privacy), so a field the user has just
             // typed into differs from the empty one only by this flag, which moves the guide on.
-            a.role == b.role && a.text == b.text && a.desc == b.desc && a.id == b.id && a.hint == b.hint && a.filled == b.filled
+            a.role == b.role && a.text == b.text && a.desc == b.desc && a.id == b.id && a.hint == b.hint && a.filled == b.filled && a.focused == b.focused
     }
 }

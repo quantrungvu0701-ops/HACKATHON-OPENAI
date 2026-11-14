@@ -418,6 +418,9 @@ class GuideService : AccessibilityService() {
         // The user pressed the ring: the next screen change is progress, analyse it quickly.
         actedFast = true
         // Fields and toggles change in place; only buttons and links are expected to move on.
+        // A press on a field puts the cursor in it: the next answer must be "type", not "tap it" again.
+        // Any press on the ring: the next answer must move on, not repeat this step.
+        engine.noteUserActed()
         if (stuckSaid || target.role !in MOVES_ON) return
         val hashAtTap = analysedHash
         stuckCheck?.cancel()
