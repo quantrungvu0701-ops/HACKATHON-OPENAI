@@ -1,6 +1,6 @@
 # Kịch bản pitch 5 phút (đã gồm demo)
 
-**Kết luận về thời gian:** 3 use case live KHÔNG vừa 5 phút (dịch vụ công ~60 s, CapCut ~90 s, VNPost cần mã bưu gửi + captcha). Demo live **1 case: Dịch vụ công**. VNPost và CapCut chỉ nói ở slide 6 (và mở CapCut live nếu còn ≥ 40 s).
+**Kết luận về thời gian:** 3 use case live KHÔNG vừa 5 phút (dịch vụ công ~60 s, CapCut ~90 s, VNPost cần mã bưu gửi + captcha). Demo live đầy đủ **Dịch vụ công**, rồi CapCut (đến bước khoanh «Split») nếu còn giờ — CapCut cho thấy app giúp cả người trẻ, không chỉ người già. VNPost chỉ nhắc miệng.
 
 | Thời gian | Slide | Nói gì |
 |---|---|---|
