@@ -29,11 +29,14 @@ import json
 import re
 import sys
 import time
+import unicodedata
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 STATE = {"pick": "", "caution": False, "step": 0, "delay": 0.0}
 NL = chr(10)
+# Press/type verbs: a "Kéo ..." step that also contains one of these is a tap step.
+PRESS_WORDS = {"bấm", "nhấn", "chạm", "ấn", "gõ", "chọn"}
 
 
 def user_parts(body):
@@ -99,10 +102,12 @@ def guide_reply(text):
             target = find_node(nodes, step["target_hint"], literal=True)
             step_n, pitfall = step.get("n"), step.get("pitfall")
             caution = caution or bool(step.get("caution"))
-        # A step whose "do" starts with "Kéo" is a scroll step: the model should say to scroll.
-        do = (step or {}).get("do", "").strip()
-        if do.lower().startswith("kéo"):
-            scroll_do, scroll_up = do, "lên" in re.findall(r"\w+", do.lower())[:4]
+        # A step whose "do" starts with "Kéo" and asks for no press or typing is a scroll step:
+        # the model should say to scroll. "Kéo ... rồi bấm X" stays a tap step.
+        do = unicodedata.normalize("NFC", (step or {}).get("do", "")).strip()
+        words = re.findall(r"\w+", do.lower())
+        if do.lower().startswith("kéo") and not PRESS_WORDS.intersection(words):
+            scroll_do, scroll_up = do, "lên" in words[:4]
             step_n = step.get("n")
     else:
         # Rules "signal~target;;signal~target": the first rule whose signal is on screen wins.
