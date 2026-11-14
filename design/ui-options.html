@@ -1,0 +1,340 @@
+<title>Chỉ Đây UI Options</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one band per option; each band = rationale column + a row of three phone screens (Home, Overlay, DocCheck). */
+:root{
+  --bg:#f6f1ea; --fg:#2b2118; --muted:#6b5b4d; --line:#e3d6c6; --panel:#fffdf9; --accent:#d9480f; --chip:#f3e7da;
+  /* App palette (from app/ui/Theme.kt). Phone screens keep it in both page themes, because the app itself is light-only. */
+  --app-brand:#d9480f; --app-brand-dark:#a6360b; --app-paper:#fff7ee; --app-ink:#2b2118; --app-soft:#6b5b4d;
+  --app-ok:#2b8a3e; --app-warn:#e67700; --app-card:#ffffff; --app-variant:#f3e7da; --app-err:#c92a2a;
+  --f-ui:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1712;--fg:#f1e8de;--muted:#b4a594;--line:#3a3028;--panel:#251f19;--accent:#ff7a3d;--chip:#30271f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1c1712;--fg:#f1e8de;--muted:#b4a594;--line:#3a3028;--panel:#251f19;--accent:#ff7a3d;--chip:#30271f;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding-block:32px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:40px}
+header h1{font-size:clamp(28px,4vw,40px);line-height:1.15;margin:0 0 8px;font-weight:800;text-wrap:balance;letter-spacing:-.01em}
+header p{margin:0;max-width:68ch;color:var(--muted)}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.facts span{background:var(--chip);border-radius:999px;padding:4px 12px;font-size:13px}
+.facts b{font-family:var(--f-mono);font-weight:500}
+section.opt{display:grid;grid-template-columns:minmax(0,280px) minmax(0,1fr);gap:24px;border-top:1px solid var(--line);padding-top:32px}
+@media (max-width:900px){section.opt{grid-template-columns:minmax(0,1fr)}}
+.tag{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.opt h2{font-size:26px;line-height:1.2;margin:4px 0 8px;text-wrap:balance}
+.opt .ref{font-size:13px;color:var(--muted);margin:0 0 12px}
+.opt ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.opt h3{font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:16px 0 6px;color:var(--muted)}
+.pick{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px}
+.screens{display:flex;align-items:flex-start;gap:16px;overflow-x:auto;padding-bottom:12px;min-width:0}
+figure{margin:0;flex:0 0 auto;display:grid;gap:8px;justify-items:center}
+figcaption{font-size:13px;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding-top:24px;font-size:13px;color:var(--muted)}
+footer ol{padding-left:18px;display:grid;gap:4px}
+footer a{color:var(--accent)}
+.rec{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.rec h2{margin:0 0 6px;font-size:20px}
+.rec p{margin:0;max-width:75ch}
+
+/* ---------- phone shell ---------- */
+.phone{width:256px;height:540px;border-radius:34px;background:#1d1a17;padding:9px;box-shadow:0 10px 30px rgba(40,25,10,.18)}
+.scr{position:relative;width:100%;height:100%;border-radius:26px;overflow:hidden;background:var(--app-paper);color:var(--app-ink);font-family:var(--f-ui);display:flex;flex-direction:column}
+.sb{height:24px;flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;padding:0 16px;font-size:10px;font-weight:600}
+.body{flex:1;padding:8px 14px 14px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.btn{border:0;border-radius:14px;background:var(--app-brand);color:#fff;font:700 16px/1.2 var(--f-ui);padding:14px;text-align:center;width:100%}
+.btn.ghost{background:var(--app-card);color:var(--app-ink);border:2px solid var(--app-variant)}
+.small{font-size:11px;color:var(--app-soft)}
+.dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto}
+.ok{background:var(--app-ok)} .warn{background:var(--app-warn)} .bad{background:var(--app-err)}
+
+/* fake web page under the overlay (dichvucong.gov.vn search result) */
+.web{flex:1;background:#fff;display:flex;flex-direction:column;font-size:10.5px;color:#333}
+.addr{margin:4px 10px;background:#eef0f3;border-radius:999px;padding:5px 10px;font-size:10px;color:#555}
+.webhead{background:#b8282e;color:#fff;padding:8px 10px;font-weight:700;font-size:11px}
+.row{padding:9px 10px;border-bottom:1px solid #eee;line-height:1.35}
+.row b{color:#1a4f9c;font-weight:600}
+.dim{position:absolute;inset:0;background:rgba(20,12,6,.45)}
+.ring{position:absolute;border:4px solid var(--app-brand);border-radius:12px;box-shadow:0 0 0 6px rgba(217,72,15,.25),0 0 0 999px rgba(20,12,6,.45)}
+.ring::after{content:"";position:absolute;inset:-12px;border:2px solid rgba(255,140,80,.7);border-radius:16px;animation:pulse 1.6s ease-out infinite}
+@keyframes pulse{from{opacity:1;transform:scale(.96)}to{opacity:0;transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.ring::after{animation:none}}
+.hole{position:absolute;background:#fff;border-radius:10px}
+.bubble{position:absolute;width:52px;height:52px;border-radius:50%;background:var(--app-brand);box-shadow:0 3px 10px rgba(0,0,0,.35);display:grid;place-items:center}
+.bubble::before{content:"";width:22px;height:22px;border-radius:50%;border:3px solid #fff}
+.bubble.on{box-shadow:0 0 0 5px rgba(255,255,255,.85),0 3px 10px rgba(0,0,0,.35)}
+.icon{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--app-variant);font-weight:800;color:var(--app-brand)}
+
+/* ---------- Option A: Một nút ---------- */
+.a-hero{flex:1;display:grid;place-items:center;text-align:center;gap:6px;align-content:center}
+.a-big{width:170px;height:170px;border-radius:50%;background:var(--app-brand);color:#fff;display:grid;place-items:center;font:800 26px/1.1 var(--f-ui);box-shadow:0 0 0 14px rgba(217,72,15,.12),0 0 0 28px rgba(217,72,15,.06)}
+.a-checks{display:flex;justify-content:center;gap:14px;font-size:11px;font-weight:600}
+.a-checks span{display:flex;gap:5px;align-items:center}
+.a-card{position:absolute;left:10px;right:10px;bottom:10px;background:var(--app-card);border-radius:18px;padding:14px;box-shadow:0 6px 20px rgba(0,0,0,.3);display:grid;gap:8px}
+.a-card .say{font-size:17px;font-weight:700;line-height:1.3}
+.a-card .meta{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--app-soft)}
+.a-card .acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.a-card .acts div{background:var(--app-variant);border-radius:12px;text-align:center;padding:9px;font-weight:700;font-size:13px}
+.doc-frame{border-radius:16px;background:#2b2b2b;aspect-ratio:1.58;max-width:100%;position:relative;overflow:hidden}
+.doc-card{position:absolute;inset:14% 10%;border-radius:8px;background:linear-gradient(135deg,#d7e6f5,#a8c4e2);filter:blur(2.2px)}
+.doc-card.sharp{filter:none}
+.corner{position:absolute;width:18px;height:18px;border-color:#fff;border-style:solid}
+.verdict{border-radius:16px;padding:12px;display:grid;gap:4px}
+.verdict.badv{background:#fde8e8;border:2px solid var(--app-err)}
+.verdict.goodv{background:#e6f4ea;border:2px solid var(--app-ok)}
+.verdict b{font-size:16px}
+
+/* ---------- Option B: Ô gạch ---------- */
+.b-greet{font-size:22px;font-weight:800;line-height:1.2}
+.b-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.b-tile{background:var(--app-card);border-radius:18px;padding:12px;min-height:104px;display:flex;flex-direction:column;justify-content:space-between;border:2px solid var(--app-variant)}
+.b-tile b{font-size:14px;line-height:1.25}
+.b-tile.hot{background:var(--app-brand);color:#fff;border-color:var(--app-brand)}
+.b-tile.hot .icon{background:rgba(255,255,255,.2);color:#fff}
+.b-status{display:flex;align-items:center;gap:8px;background:#e6f4ea;border-radius:12px;padding:8px 10px;font-size:12px;font-weight:600;color:#1f6a30}
+.b-top{position:absolute;left:0;right:0;top:24px;background:var(--app-card);padding:10px 12px;display:grid;gap:7px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.b-steps{display:flex;gap:4px}
+.b-steps i{flex:1;height:6px;border-radius:3px;background:var(--app-variant)}
+.b-steps i.done{background:var(--app-ok)} .b-steps i.now{background:var(--app-brand)}
+.b-top .say{font-size:15px;font-weight:700;line-height:1.3}
+.b-top .meta{display:flex;justify-content:space-between;font-size:11px;color:var(--app-soft)}
+.b-list{display:grid;gap:8px}
+.b-li{display:flex;gap:10px;align-items:center;background:var(--app-card);border-radius:14px;padding:10px;font-size:13px;font-weight:600;border:2px solid var(--app-variant)}
+.b-li .mark{margin-left:auto;font-weight:800}
+
+/* ---------- Option C: Trò chuyện ---------- */
+.c-msg{max-width:88%;border-radius:18px;padding:10px 12px;font-size:14px;line-height:1.4}
+.c-msg.bot{background:var(--app-card);border-bottom-left-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.c-msg.me{background:var(--app-brand);color:#fff;margin-left:auto;border-bottom-right-radius:6px}
+.c-chips{display:flex;flex-wrap:wrap;gap:6px}
+.c-chips span{background:var(--app-card);border:2px solid var(--app-brand);color:var(--app-brand-dark);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700}
+.c-bar{margin-top:auto;display:flex;gap:8px;align-items:center}
+.c-input{flex:1;background:var(--app-card);border-radius:999px;padding:11px 14px;font-size:12px;color:var(--app-soft);border:2px solid var(--app-variant)}
+.c-mic{width:54px;height:54px;border-radius:50%;background:var(--app-brand);display:grid;place-items:center;flex:0 0 auto}
+.c-mic::before{content:"";width:12px;height:20px;border-radius:7px;background:#fff}
+.c-avatar{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px}
+.c-avatar i{width:30px;height:30px;border-radius:50%;background:var(--app-brand);display:block;box-shadow:inset 0 0 0 6px #ffb08a}
+.c-tip{position:absolute;background:var(--app-card);border-radius:16px;padding:10px 12px;font-size:13.5px;font-weight:700;line-height:1.35;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+.c-tip::after{content:"";position:absolute;left:28px;top:-9px;border:9px solid transparent;border-top:0;border-bottom-color:var(--app-card)}
+.c-tip small{display:block;font-weight:500;color:var(--app-soft);font-size:11px;margin-top:4px}
+.c-wave{display:flex;gap:3px;align-items:center;height:16px;margin-top:6px}
+.c-wave i{width:3px;background:var(--app-brand);border-radius:2px}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="tag">Chỉ Đây · đề xuất giao diện</div>
+  <h1>Ba hướng giao diện cho Chỉ Đây</h1>
+  <p>Mỗi hướng vẽ ba màn: trang chủ sau khi mở lại app, lớp phủ khoanh nút trên dichvucong.gov.vn, và kiểm tra ảnh giấy tờ. Cả ba giữ màu cam hiện có trong <code>Theme.kt</code> và chuỗi chữ trong <code>strings.xml</code>, nên chuyển sang Compose không phải đổi nhận diện.</p>
+  <div class="facts">
+    <span>Nút bấm tối thiểu <b>48dp</b> (Material), mục tiêu cho người lớn tuổi <b>≥ 60px</b></span>
+    <span>Chữ thân <b>≥ 16px</b></span>
+    <span>WCAG 2.2: <b>24px</b> mức AA, <b>44px</b> mức AAA</span>
+    <span>JMIR 2023: <b>28</b> hướng dẫn, quan trọng nhất là “đơn giản hóa” và “nút to, cách xa”</span>
+  </div>
+</header>
+
+<!-- ================= OPTION A ================= -->
+<section class="opt" id="a">
+  <div>
+    <div class="tag">Phương án A</div>
+    <h2>Một nút cam</h2>
+    <p class="ref">Tham khảo: Be My Eyes (cả màn hình chỉ có một hành động gọi trợ giúp), nút SOS của Jitterbug Smart4.</p>
+    <p>Trang chủ chỉ có một việc: bấm nút cam to. Ba mục kiểm tra thu thành ba chấm xanh nhỏ phía dưới, chỉ nở ra khi có mục đỏ. Lớp phủ dùng một thẻ lớn ở đáy màn hình, chỗ ngón cái chạm tới dễ nhất.</p>
+    <h3>Mạnh</h3>
+    <ul><li>Ít quyết định nhất cho bác: mở app là biết bấm đâu.</li><li>Ba chấm xanh khớp đúng bước 1 kịch bản demo (giám khảo tắt rồi mở lại).</li><li>Sửa ít code nhất: chủ yếu là HomeScreen.</li></ul>
+    <h3>Yếu</h3>
+    <ul><li>Thẻ đáy có thể che nút cần bấm nếu nút nằm thấp; cần tự đẩy thẻ lên trên khi vòng tròn ở nửa dưới.</li><li>Ít chỗ để khoe playbook và tính năng tạo hướng dẫn.</li></ul>
+    <div class="pick">Hợp nhất cho phần 40 điểm demo: nhanh, rõ, khó bấm nhầm.</div>
+  </div>
+  <div class="screens">
+    <figure><div class="phone"><div class="scr">
+      <div class="sb"><span>9:41</span><span>Chỉ Đây</span></div>
+      <div class="body">
+        <div class="a-hero">
+          <div class="a-big">Chỉ<br>cho tôi</div>
+          <div style="font-size:16px;font-weight:700;max-width:200px;margin-top:22px">Bấm nút cam khi bác không biết bấm vào đâu.</div>
+          <div class="small">Nút cam nhỏ cũng nổi trên mọi ứng dụng khác.</div>
+        </div>
+        <div class="a-checks"><span><i class="dot ok"></i>Trợ năng</span><span><i class="dot ok"></i>AI</span><span><i class="dot ok"></i>Giọng đọc</span></div>
+        <div class="btn ghost" style="font-size:14px">Kiểm tra ảnh giấy tờ</div>
+      </div>
+    </div></div><figcaption>Trang chủ</figcaption></figure>
+
+    <figure><div class="phone"><div class="scr">
+      <div class="sb"><span>9:42</span><span>●●</span></div>
+      <div class="web">
+        <div class="addr">dichvucong.gov.vn</div>
+        <div class="webhead">Kết quả tìm kiếm: khai sinh</div>
+        <div class="row"><b>Đăng ký khai sinh</b><br>Cấp xã</div>
+        <div class="row"><b>Cấp bản sao trích lục hộ tịch, bản sao Giấy khai sinh</b><br>Cấp xã · Trực tuyến toàn trình</div>
+        <div class="row"><b>Đăng ký lại khai sinh</b><br>Cấp xã</div>
+        <div class="row"><b>Đăng ký khai sinh có yếu tố nước ngoài</b></div>
+      </div>
+      <div class="ring" style="left:4px;right:4px;top:141px;height:58px"></div>
+      <div class="bubble on" style="right:10px;top:250px"></div>
+      <div class="a-card">
+        <div class="meta"><span>Bước 2/3 · Cổng Dịch vụ công</span><span>🔊 đang đọc</span></div>
+        <div class="say">Bác bấm vào dòng «Cấp bản sao Giấy khai sinh», dòng thứ hai từ trên xuống.</div>
+        <div class="acts"><div>Nói lại</div><div>Dừng</div></div>
+      </div>
+    </div></div><figcaption>Lớp phủ khoanh nút</figcaption></figure>
+
+    <figure><div class="phone"><div class="scr">
+      <div class="sb"><span>9:45</span><span>‹ Quay lại</span></div>
+      <div class="body">
+        <div style="font-size:20px;font-weight:800">Kiểm tra ảnh giấy tờ</div>
+        <div class="doc-frame"><div class="doc-card"></div>
+          <i class="corner" style="left:8%;top:10%;border-width:3px 0 0 3px"></i><i class="corner" style="right:8%;top:10%;border-width:3px 3px 0 0"></i>
+          <i class="corner" style="left:8%;bottom:10%;border-width:0 0 3px 3px"></i><i class="corner" style="right:8%;bottom:10%;border-width:0 3px 3px 0"></i></div>
+        <div class="verdict badv"><b>Ảnh cần chụp lại</b><span style="font-size:13px">Ảnh bị mờ, không đọc được số căn cước. Bác đặt thẻ lên bàn, giữ máy yên rồi chụp lại.</span></div>
+        <div class="btn">Chụp lại</div>
+        <div class="small" style="text-align:center">Loại giấy tờ: Căn cước · trả lời sau 2.140 ms</div>
+      </div>
+    </div></div><figcaption>Kiểm tra giấy tờ</figcaption></figure>
+  </div>
+</section>
+
+<!-- ================= OPTION B ================= -->
+<section class="opt" id="b">
+  <div>
+    <div class="tag">Phương án B</div>
+    <h2>Ô gạch theo việc</h2>
+    <p class="ref">Tham khảo: Samsung Easy mode, Simple Mode và BIG Launcher (ô vuông to, tương phản cao, ít mục).</p>
+    <p>Trang chủ chia theo việc bác cần làm, mỗi việc là một ô to: mỗi ô gắn với một playbook đã kiểm chứng. Lớp phủ đặt dải hướng dẫn ở trên, có thanh tiến độ từng bước để bác biết còn bao xa.</p>
+    <h3>Mạnh</h3>
+    <ul><li>Cho giám khảo thấy ngay danh sách dịch vụ đã có hướng dẫn, phục vụ phần 25 điểm về mở rộng.</li><li>Chọn việc trước nên AI có playbook đúng ngay bước đầu, độ tin cậy cao hơn.</li><li>Thanh tiến độ trả lời câu “còn mấy bước nữa?”.</li></ul>
+    <h3>Yếu</h3>
+    <ul><li>Bác phải đọc và chọn trước khi bắt đầu, thêm một quyết định.</li><li>Dải trên che thanh địa chỉ và nút góc trên (như «Đăng nhập»); cần lật xuống đáy khi vòng tròn ở trên.</li></ul>
+    <div class="pick">Hợp khi muốn nhấn mạnh playbook và câu chuyện mở rộng ra nhiều dịch vụ.</div>
+  </div>
+  <div class="screens">
+    <figure><div class="phone"><div class="scr">
+      <div class="sb"><span>9:41</span><span>Chỉ Đây</span></div>
+      <div class="body">
+        <div class="b-status"><i class="dot ok"></i>Sẵn sàng · nút cam đang nổi</div>
+        <div class="b-greet">Bác muốn làm việc gì?</div>
+        <div class="b-grid">
+          <div class="b-tile hot"><span class="icon">CD</span><b>Bản sao giấy khai sinh</b></div>
+          <div class="b-tile"><span class="icon">Aa</span><b>Chữ to hơn trên máy</b></div>
+          <div class="b-tile"><span class="icon">📷</span><b>Kiểm tra ảnh giấy tờ</b></div>
+          <div class="b-tile"><span class="icon">+</span><b>Việc khác, tôi tự nói</b></div>
+        </div>
+        <div class="small" style="text-align:center;margin-top:auto">Tạo hướng dẫn mới từ văn bản · Cài đặt AI</div>
+      </div>
+    </div></div><figcaption>Trang chủ</figcaption></figure>
+
+    <figure><div class="phone"><div class="scr">
+      <div class="sb"><span>9:42</span><span>●●</span></div>
+      <div class="web">
+        <div class="addr">dichvucong.gov.vn</div>
+        <div class="webhead">Kết quả tìm kiếm: khai sinh</div>
+        <div class="row" style="margin-top:90px"><b>Đăng ký khai sinh</b><br>Cấp xã</div>
+        <div class="row"><b>Cấp bản sao trích lục hộ tịch, bản sao Giấy khai sinh</b><br>Cấp xã · Trực tuyến toàn trình</div>
+        <div class="row"><b>Đăng ký lại khai sinh</b><br>Cấp xã</div>
+      </div>
+      <div class="ring" style="left:4px;right:4px;top:228px;height:58px"></div>
+      <div class="b-top">
+        <div class="b-steps"><i class="done"></i><i class="now"></i><i></i></div>
+        <div class="meta"><span>Bước 2/3 · Bản sao giấy khai sinh</span><span>🔊</span></div>
+        <div class="say">Bấm dòng «Cấp bản sao Giấy khai sinh» ở giữa màn hình.</div>
+      </div>
+      <div class="bubble on" style="right:10px;bottom:24px"></div>
+    </div></div><figcaption>Lớp phủ khoanh nút</figcaption></figure>
+
+    <figure><div class="phone"><div class="scr">
+      <div class="sb"><span>9:45</span><span>‹ Quay lại</span></div>
+      <div class="body">
+        <div style="font-size:20px;font-weight:800">Ảnh căn cước</div>
+        <div class="doc-frame"><div class="doc-card sharp"></div></div>
+        <div class="b-list">
+          <div class="b-li"><i class="dot ok"></i>Đủ bốn góc<span class="mark" style="color:var(--app-ok)">✓</span></div>
+          <div class="b-li"><i class="dot ok"></i>Không bị mờ<span class="mark" style="color:var(--app-ok)">✓</span></div>
+          <div class="b-li"><i class="dot bad"></i>Bị lóa góc phải<span class="mark" style="color:var(--app-err)">✕</span></div>
+          <div class="b-li"><i class="dot ok"></i>Đọc được chữ<span class="mark" style="color:var(--app-ok)">✓</span></div>
+        </div>
+        <div class="btn" style="margin-top:auto">Chụp lại, tránh đèn</div>
+      </div>
+    </div></div><figcaption>Kiểm tra giấy tờ</figcaption></figure>
+  </div>
+</section>
+
+<!-- ================= OPTION C ================= -->
+<section class="opt" id="c">
+  <div>
+    <div class="tag">Phương án C</div>
+    <h2>Người chỉ đường biết nói</h2>
+    <p class="ref">Tham khảo: Gemini Live chia sẻ màn hình, khung chat Zalo (quen với người lớn tuổi Việt Nam), lời chỉ dẫn từng bước của TalkBack.</p>
+    <p>Trang chủ là cuộc trò chuyện: Chỉ Đây hỏi “Bác muốn làm gì?”, bác bấm micro nói hoặc chọn gợi ý. Trên lớp phủ, lời chỉ dẫn là một bong bóng thoại có mũi tên dính sát vòng tròn, nên mắt không phải nhảy giữa nút và chữ.</p>
+    <h3>Mạnh</h3>
+    <ul><li>Cho thấy AI rõ nhất trên sân khấu: nói mục tiêu bằng giọng, nhận lời đáp tự nhiên.</li><li>Bong bóng sát nút giảm khoảng cách giữa chữ và chỗ cần bấm.</li><li>Khớp chế độ “không có playbook” (generic mode) trong MECHANISM.md §4.</li></ul>
+    <h3>Yếu</h3>
+    <ul><li>Cần thêm nhận dạng giọng nói (SpeechRecognizer) và tính vị trí bong bóng, nhiều việc nhất.</li><li>Ở sân khấu ồn, micro có thể nghe sai; vẫn phải có gợi ý bấm.</li></ul>
+    <div class="pick">Gây ấn tượng nhất, nhưng rủi ro cao nhất trước giờ demo.</div>
+  </div>
+  <div class="screens">
+    <figure><div class="phone"><div class="scr">
+      <div class="sb"><span>9:41</span><span><i class="dot ok" style="display:inline-block;width:8px;height:8px"></i> Sẵn sàng</span></div>
+      <div class="body">
+        <div class="c-avatar"><i></i>Chỉ Đây</div>
+        <div class="c-msg bot">Chào bác. Bác muốn làm việc gì hôm nay?</div>
+        <div class="c-chips"><span>Bản sao khai sinh</span><span>Chữ to hơn</span><span>Kiểm tra ảnh</span></div>
+        <div class="c-msg me">Tôi muốn xin bản sao giấy khai sinh cho cháu</div>
+        <div class="c-msg bot">Được ạ. Bác mở Chrome vào dichvucong.gov.vn, rồi bấm nút cam. Tôi sẽ khoanh từng chỗ cho bác.</div>
+        <div class="c-bar"><div class="c-input">Bấm micro để nói…</div><div class="c-mic"></div></div>
+      </div>
+    </div></div><figcaption>Trang chủ</figcaption></figure>
+
+    <figure><div class="phone"><div class="scr">
+      <div class="sb"><span>9:42</span><span>●●</span></div>
+      <div class="web">
+        <div class="addr">dichvucong.gov.vn</div>
+        <div class="webhead">Kết quả tìm kiếm: khai sinh</div>
+        <div class="row"><b>Đăng ký khai sinh</b><br>Cấp xã</div>
+        <div class="row"><b>Cấp bản sao trích lục hộ tịch, bản sao Giấy khai sinh</b><br>Cấp xã · Trực tuyến toàn trình</div>
+        <div class="row"><b>Đăng ký lại khai sinh</b><br>Cấp xã</div>
+        <div class="row"><b>Đăng ký khai sinh có yếu tố nước ngoài</b></div>
+      </div>
+      <div class="ring" style="left:4px;right:4px;top:141px;height:58px"></div>
+      <div class="c-tip" style="left:12px;right:40px;top:226px">Bác bấm vào dòng này nhé.
+        <small>Bước 2/3 · «Cấp bản sao Giấy khai sinh»</small>
+        <div class="c-wave"><i style="height:6px"></i><i style="height:14px"></i><i style="height:9px"></i><i style="height:16px"></i><i style="height:7px"></i><i style="height:12px"></i></div>
+      </div>
+      <div class="bubble on" style="right:10px;bottom:24px"></div>
+    </div></div><figcaption>Lớp phủ khoanh nút</figcaption></figure>
+
+    <figure><div class="phone"><div class="scr">
+      <div class="sb"><span>9:45</span><span>‹ Quay lại</span></div>
+      <div class="body">
+        <div class="c-avatar"><i></i>Kiểm tra ảnh</div>
+        <div class="c-msg me" style="padding:6px"><div class="doc-frame" style="width:170px"><div class="doc-card"></div></div></div>
+        <div class="c-msg bot">Ảnh hơi mờ nên tôi chưa đọc được số trên thẻ. Bác đặt thẻ lên bàn chỗ sáng, giữ máy thật yên rồi chụp lại nhé.</div>
+        <div class="c-chips"><span>Chụp lại</span><span>Chọn ảnh khác</span></div>
+        <div class="c-bar"><div class="c-input">Hỏi thêm về ảnh…</div><div class="c-mic"></div></div>
+      </div>
+    </div></div><figcaption>Kiểm tra giấy tờ</figcaption></figure>
+  </div>
+</section>
+
+<div class="rec">
+  <h2>Đề xuất</h2>
+  <p>Lấy A làm bộ khung cho demo, vì nó ít bước và ít rủi ro nhất khi giám khảo tắt mở lại app. Mượn hai chi tiết: thanh tiến độ từng bước của B, và bong bóng thoại dính sát vòng tròn của C. Hai chi tiết này chỉ đụng tới <code>HighlightWindow</code>, không cần thêm quyền hay thư viện mới.</p>
+</div>
+
+<footer>
+  <div class="tag" style="color:var(--muted)">Nguồn</div>
+  <ol>
+    <li>Gomez-Hernandez et al. (2023). Design guidelines of mobile apps for older adults: systematic review. <i>JMIR mHealth and uHealth</i>. <a href="https://mhealth.jmir.org/2023/1/e43186/PDF">mhealth.jmir.org</a></li>
+    <li>Nielsen Norman Group. Why design for older adults? <a href="https://www.nngroup.com/alertbox/seniors.html">nngroup.com</a></li>
+    <li>Maynooth University. Target size and spacing for older adults on smartphones. <a href="https://mural.maynoothuniversity.ie/6045/1/PS-Target-Spacing.pdf">mural.maynoothuniversity.ie</a></li>
+    <li>Smashing Magazine (2015). Designing for the elderly. <a href="https://www.smashingmagazine.com/2015/02/designing-digital-technology-for-the-elderly/">smashingmagazine.com</a></li>
+    <li>Google. Touch target size (Android accessibility). <a href="https://support.google.com/accessibility/android/answer/7101858?hl=en-GB">support.google.com</a> · TetraLogical. Foundations: target sizes (WCAG 2.5.5, 2.5.8). <a href="https://tetralogical.com/blog/2022/12/20/foundations-target-size/">tetralogical.com</a></li>
+    <li>Elderly people and digital divide: a case study in Vietnam. <i>Vietnam Socio-Economic Development</i>. <a href="https://vjol.vista.gov.vn/VietnamSocioEconomicDevelop/article/view/114035">vjol.vista.gov.vn</a> · Elderly people's adaptation to the evolving digital society, Vietnam (MDPI <i>Social Sciences</i> 2022, n = 1.043). <a href="https://econpapers.repec.org/RePEc:gam:jscscx:v:11:y:2022:i:8:p:324-:d:871344">econpapers.repec.org</a></li>
+    <li>Senior launchers (Simple Mode, BIG Launcher). <a href="https://maketecheasier.com/best-android-launchers-for-senior-visually-impaired-users">maketecheasier.com</a> · Lively Jitterbug Smart4. <a href="https://shop.lively.com/blogs/help-center/jitterbug-smart4">lively.com</a> · Be My Eyes UI study. <a href="https://desirabilitylab.com/backfill/backfill-2023-174-be-my-eyes-app">desirabilitylab.com</a></li>
+    <li>Google. Get started on Android with TalkBack. <a href="https://support.google.com/accessibility/android/answer/6283677">support.google.com</a></li>
+  </ol>
+</footer>
+</div>
