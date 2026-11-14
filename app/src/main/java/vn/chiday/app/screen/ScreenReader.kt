@@ -57,9 +57,26 @@ class ScreenSnapshot(
         h
     }
 
-    fun toJson(): String = JSON.encodeToString(ScreenPayload(pkg, host, nodes))
+    /**
+     * The payload sent to the model. A long list is cut to [MAX_SENT] nodes, tap targets and
+     * input fields first; every node keeps its own "i", so the model's index still maps to
+     * [nodes]`[i]`.
+     */
+    fun toJson(): String {
+        val sent = if (nodes.size <= MAX_SENT) nodes else {
+            val keep = HashSet<Int>()
+            nodes.filter { it.clickable == true || it.role == "edit" }.take(MAX_SENT).forEach { keep += it.i }
+            for (n in nodes) {
+                if (keep.size >= MAX_SENT) break
+                keep += n.i
+            }
+            nodes.filter { it.i in keep }
+        }
+        return JSON.encodeToString(ScreenPayload(pkg, host, sent))
+    }
 
     private companion object {
+        const val MAX_SENT = 120
         val JSON = Json { explicitNulls = false; encodeDefaults = false }
     }
 }

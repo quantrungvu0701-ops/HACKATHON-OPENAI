@@ -144,9 +144,22 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         if (!s.isComplete) return GuideResult.Failed("no API key configured", missingKey = true)
         if (snapshot.nodes.isEmpty()) return GuideResult.NotSure("empty node list")
 
-        val playbook = sessionPlaybook?.takeIf { it.appliesTo(snapshot) } ?: playbooks.select(snapshot, goal)
-        if (playbook?.id != sessionPlaybook?.id) { lastStepN = null; lastStepShown = 0 }
-        sessionPlaybook = playbook
+        // The session playbook and its progress survive screens it does not apply to (keyboard,
+        // permission dialog, system UI, a page whose host reads null for a moment): only a
+        // different playbook that positively applies here replaces it. Until resetSession().
+        val session = sessionPlaybook
+        val playbook: Playbook? = if (session != null && session.appliesTo(snapshot)) {
+            session
+        } else {
+            val picked = playbooks.select(snapshot, goal)
+            if (picked != null && picked.id != session?.id) {
+                sessionPlaybook = picked
+                lastStepN = null
+                lastStepShown = 0
+                pressesOnStep = 0
+            }
+            picked
+        }
         // A `repeat` step is left once its target has been pressed that many times.
         val likely = playbook?.likelyStep(snapshot, lastStepN, pressesOnStep)
         Log.i(TAG, "playbook=${playbook?.id ?: "none"} likelyStep=${likely?.n ?: "-"}")
@@ -171,7 +184,19 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
             return GuideResult.Failed(e.message ?: e.javaClass.simpleName)
         }
 
+        // The model has seen USER_ACTION: only now is it consumed (a failed or cancelled call keeps it).
+        userActed = false
         var reply = parse(raw) ?: return GuideResult.NotSure("unparseable reply: ${raw.take(120)}")
+        val floor = lastStepN
+        val said = reply.step
+        if (playbook != null && floor != null && said != null && said < floor &&
+            !playbook.clearlyBackAt(snapshot, said, floor)
+        ) {
+            // Progress is monotonic: a finished step comes back only on strong evidence.
+            val fixed = likely?.n?.takeIf { it >= floor } ?: floor
+            Log.i(TAG, "model went back to step $said after $floor: kept step $fixed")
+            reply = reply.copy(step = fixed)
+        }
         if (playbook != null) {
             // The playbook, not the model, is the authority on length and on which steps are risky.
             val step = playbook.steps.firstOrNull { it.n == reply.step }
@@ -219,17 +244,59 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         append("GOAL: ").append(g ?: "not stated; choose the most likely next step on this screen").append('\n')
         append("LAST_STEP: ").append(lastStep ?: "none").append('\n')
         if (userActed) {
-            userActed = false
             append("USER_ACTION: the user has just pressed the target of the last step and the screen stayed the same; continue with the step after it\n")
         }
         if (playbook == null) {
             append("PLAYBOOK: none\n")
         } else {
-            append("PLAYBOOK: ").append(COMPACT.encodeToString(playbook)).append('\n')
+            val n = lastStepN
+            val current = if (n == null) null else {
+                val repeat = playbook.steps.firstOrNull { it.n == n }?.repeat ?: 1
+                if (pressesOnStep >= repeat) n + 1 else n
+            }
+            append("PLAYBOOK: ").append(COMPACT.encodeToString(CompactPlaybook.serializer(), compact(playbook, current, likely?.n))).append('\n')
+            if (current != null) {
+                val done = current - 1
+                if (done >= 1) append("PROGRESS: steps 1..").append(done).append(" are done; ") else append("PROGRESS: ")
+                append("current step is at least ").append(current).append('\n')
+            }
             append("LIKELY_STEP: ").append(likely?.n?.toString() ?: "unknown").append('\n')
         }
         append("SCREEN: ").append(snapshot.toJson())
     }
+
+    /** The playbook without match rules and signals; with known progress only the steps around it. */
+    private fun compact(playbook: Playbook, current: Int?, likely: Int?): CompactPlaybook {
+        val steps = playbook.steps.filter { s ->
+            current == null || s.n in (current - 1)..(current + 2) || s.n == likely
+        }
+        return CompactPlaybook(
+            id = playbook.id,
+            service = playbook.service,
+            goal = playbook.goal,
+            total = playbook.steps.size,
+            steps = steps.map { CompactStep(it.n, it.action, it.targetHint, it.pitfall, it.caution, it.repeat) },
+        )
+    }
+
+    @Serializable
+    private data class CompactStep(
+        val n: Int,
+        @SerialName("do") val action: String,
+        @SerialName("target_hint") val targetHint: String? = null,
+        val pitfall: String? = null,
+        val caution: Boolean = false,
+        val repeat: Int = 1,
+    )
+
+    @Serializable
+    private data class CompactPlaybook(
+        val id: String,
+        val service: String,
+        val goal: String,
+        val total: Int,
+        val steps: List<CompactStep>,
+    )
 
     companion object {
         private const val TAG = "ChiDay"
@@ -248,15 +315,20 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
                 "With a playbook: work out which step this screen is (LIKELY_STEP is a hint from " +
                 "text matching), set \"step\" to that step's \"n\", point at the element that step " +
                 "describes, and mention the step's pitfall if it has one. If the screen fits no step " +
-                "of the playbook, guide from the goal alone. " +
+                "of the playbook, guide from the goal alone. The playbook may list only the steps " +
+                "around the current one; \"total\" is the full count. PROGRESS tells which steps " +
+                "are already done: never go back to a finished step unless the screen clearly " +
+                "shows the user went back to the start; text from earlier steps (headers, search " +
+                "boxes, menus) often stays visible on later screens and is no reason to go back. " +
                 "If what the user needs is not on screen yet, or the step is only to scroll or read, " +
                 "set action=\"scroll\", tell the user which way to move the screen, do not say " +
                 "\"bấm\", and set target to the element to read if it is visible, else null. " +
                 "For privacy, input fields never show what the user typed: \"filled\": true means " +
                 "the field already has something in it, false means it is empty. Masked values " +
                 "(••••••, [email]) are hidden personal data: never ask the user to read them out. " +
-                "Reply with JSON only: {service, step, total_steps, target, action, say, subtitle, " +
-                "caution, confidence}"
+                "Keep it short: \"say\" at most 18 words, \"subtitle\" at most 8 words. " +
+                "Reply with JSON only, no markdown, no extra keys: {service, step, total_steps, " +
+                "target, action, say, subtitle, caution, confidence}"
 
         private val lenient = Json {
             ignoreUnknownKeys = true

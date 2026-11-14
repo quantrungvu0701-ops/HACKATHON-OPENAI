@@ -84,6 +84,7 @@
     <string name="guide_look">Bác xem phần đang được khoanh.</string>
     <string name="guide_miss">Bác bấm chưa trúng, ô cần bấm đang được khoanh.</string>
     <string name="guide_stuck">Trang chưa đổi, bác chờ một chút hoặc bấm lại.</string>
+    <string name="guide_thinking">Đang xem màn hình…</string>
 
     <!-- Document photo check -->
     <string name="home_open_doccheck">Kiểm tra ảnh giấy tờ</string>

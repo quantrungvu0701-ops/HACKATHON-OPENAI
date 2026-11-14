@@ -76,20 +76,45 @@ class BubbleWindow(
      * other side of the screen, or above or below a target that spans the full width. Not
      * saved: [restore] puts it back where the user left it.
      */
-    fun avoid(target: android.graphics.Rect) {
+    fun avoid(target: android.graphics.Rect, card: android.graphics.Rect? = null) {
         if (!shown) return
         val pad = (12 * density).toInt()
         val zone = android.graphics.Rect(target).apply { inset(-pad, -pad) }
-        if (!android.graphics.Rect.intersects(zone, boundsOnScreen)) return
+        val cardZone = card?.let { android.graphics.Rect(it).apply { inset(-pad / 2, -pad / 2) } }
+        // Fresh screen size every call (rotation), and always start from the user's home
+        // position so a bubble displaced for an earlier step does not stay displaced.
         val screen = wm.currentWindowMetrics.bounds
         val margin = (8 * density).toInt()
-        val other = if (lp.x + sizePx / 2 < screen.width() / 2) screen.width() - sizePx - margin else margin
-        if (other + sizePx <= zone.left || other >= zone.right) {
-            lp.x = other
-        } else {
-            // Full-width target: go above it, or below when there is no room above.
-            lp.y = if (zone.top - sizePx >= (64 * density).toInt()) zone.top - sizePx else zone.bottom
+        val hx = prefs.getInt("x", lp.x)
+        val hy = prefs.getInt("y", lp.y)
+        val other = if (hx + sizePx / 2 < screen.width() / 2) screen.width() - sizePx - margin else margin
+        val ys = mutableListOf(hy, zone.top - sizePx, zone.bottom)
+        if (cardZone != null) {
+            ys += cardZone.top - sizePx
+            ys += cardZone.bottom
         }
+        val maxX = (screen.width() - sizePx).coerceAtLeast(0)
+        val maxY = (screen.height() - sizePx).coerceAtLeast(0)
+        val box = android.graphics.Rect()
+        var best: IntArray? = null
+        var fallback: IntArray? = null
+        loop@ for (y in ys) {
+            for (x in intArrayOf(hx, other)) {
+                val cx = x.coerceIn(0, maxX)
+                val cy = y.coerceIn(0, maxY)
+                box.set(cx, cy, cx + sizePx, cy + sizePx)
+                if (android.graphics.Rect.intersects(zone, box)) continue
+                if (fallback == null) fallback = intArrayOf(cx, cy)
+                if (cardZone == null || !android.graphics.Rect.intersects(cardZone, box)) {
+                    best = intArrayOf(cx, cy)
+                    break@loop
+                }
+            }
+        }
+        val pick = best ?: fallback ?: return
+        if (pick[0] == lp.x && pick[1] == lp.y) return
+        lp.x = pick[0]
+        lp.y = pick[1]
         clamp()
         wm.updateViewLayout(view, lp)
     }

@@ -111,6 +111,28 @@ class GuideService : AccessibilityService() {
     /** Automatic analyses in a row that produced no ring; each one doubles the wait before the next. */
     private var autoMisses = 0
 
+    /**
+     * Bumped by every analysis start and by endSession. A model answer is applied only if its
+     * generation is still the newest, so an answer for an old screen (or an old session) that
+     * arrives late can never overwrite a newer instruction (the "rolls back to step 1" bug).
+     */
+    private var generation = 0L
+
+    /** Bumped on every click the user makes in another app during a session. */
+    private var actionSeq = 0L
+
+    /**
+     * The user has clearly acted (pressed the ring, or the ringed element went away): the next
+     * analysis uses the short settle and skips the automatic rate limit. Cleared when it starts.
+     */
+    private var actedFast = false
+
+    /** Bumped each time the card changes, so a stale message timeout never hides a newer card. */
+    private var uiSeq = 0L
+
+    /** Keyboard package for this session: its windows never trigger a re-analysis. */
+    private var imePkg: String? = null
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
@@ -161,12 +183,33 @@ class GuideService : AccessibilityService() {
             Log.i(TAG, "bubble tap: session started")
             sessionActive = true
             engine.resetSession()
-            analyse(auto = false)
+            imePkg = runCatching {
+                Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)?.substringBefore('/')
+            }.getOrNull()
+            analyse(auto = false, thinkingCard = true)
+        }
+    }
+
+    /** Immediate sign that the guide is working while the model call runs (no speech, no ring). */
+    private fun showThinking() {
+        val mySeq = ++uiSeq
+        highlight?.showMessage(getString(R.string.guide_thinking))
+        // Never left up forever (e.g. the follow-up read found nothing new to analyse).
+        scope.launch {
+            delay(THINKING_MAX_MS)
+            if (uiSeq == mySeq && highlight?.isShowingTarget == false) highlight?.hide()
+        }
+    }
+
+    /** Takes a "thinking" card down when an analysis ends with nothing to show. */
+    private fun clearThinking() {
+        if (card == null && !moving && highlight?.isShowingTarget == false && messageTimeout?.isActive != true) {
+            highlight?.hide()
         }
     }
 
     /** [auto] is true when follow mode triggered this, false for the user's own tap. */
-    private fun analyse(auto: Boolean, preRead: ScreenSnapshot? = null) {
+    private fun analyse(auto: Boolean, preRead: ScreenSnapshot? = null, thinkingCard: Boolean = false) {
         analysis?.cancel()
         messageTimeout?.cancel()
         // Our own windows are skipped by the reader, so the ring can stay up while we look.
@@ -177,15 +220,26 @@ class GuideService : AccessibilityService() {
             return
         }
         logSnapshot(snap)
+        val myGen = ++generation
+        val actionsAtStart = actionSeq
+        actedFast = false
+        // A "move the screen" card may stay up while we look, but its remembered target must
+        // not be re-placed by engine.recheck while this newer analysis runs (stale step).
+        moving = false
         analysedHash = snap.hash
         lastAnalysisAt = SystemClock.elapsedRealtime()
         armIdleTimeout()
         bubble?.state = BubbleWindow.State.THINKING
+        if (thinkingCard && card == null) showThinking()
         analysis = scope.launch {
             engine.goal = settings.currentGoal()
             val started = SystemClock.elapsedRealtime()
             val result = engine.decide(snap)
-            Log.i(TAG, "decision (auto=$auto) in ${SystemClock.elapsedRealtime() - started} ms: $result")
+            Log.i(TAG, "decision (auto=$auto, gen=$myGen) in ${SystemClock.elapsedRealtime() - started} ms: $result")
+            if (myGen != generation || !sessionActive) {
+                Log.i(TAG, "decision gen=$myGen is stale (newest $generation): dropped")
+                return@launch
+            }
             autoMisses = if (result is GuideResult.Show || result is GuideResult.Move || !auto) 0 else autoMisses + 1
             if (result is GuideResult.Show || result is GuideResult.Move) {
                 missSaid = false
@@ -201,16 +255,23 @@ class GuideService : AccessibilityService() {
                         show(result, snap)
                     } else {
                         val chosen = snap.nodes[result.targetIndex]
-                        val at = fresh.nodes.indexOfFirst { GuideEngine.sameElement(it, chosen) }
+                        // Re-place only when it is still the same page and the user has not
+                        // pressed anything meanwhile: otherwise the answer belongs to an old
+                        // screen, and a same-labelled element on the new one would show a
+                        // previous step again.
+                        val samePage = fresh.pkg == snap.pkg && fresh.host == snap.host && actionSeq == actionsAtStart
+                        val at = if (samePage) fresh.nodes.indexOfFirst { GuideEngine.sameElement(it, chosen) } else -1
                         if (at >= 0) {
                             show(result.copy(targetIndex = at, rect = Rect(fresh.rects[at])), fresh)
                         } else {
-                            Log.i(TAG, "screen changed during the model call and the target is gone: looking again")
+                            Log.i(TAG, "screen changed during the model call (samePage=$samePage): looking again")
                             bubble?.state = BubbleWindow.State.ACTIVE
                             analysedHash = null
+                            // The user pressed something: no rate limit before the next look.
+                            if (actionSeq != actionsAtStart) actedFast = true
                             settle?.cancel()
                             settle = scope.launch {
-                                delay(SETTLE_MS)
+                                delay(if (actedFast) ACT_SETTLE_MS else SETTLE_MS)
                                 onScreenSettled()
                             }
                         }
@@ -223,6 +284,7 @@ class GuideService : AccessibilityService() {
                     // and look again when it settles, instead of flashing a message.
                     Log.i(TAG, "auto analysis unsure once: waiting for the screen to settle")
                     bubble?.state = BubbleWindow.State.ACTIVE
+                    clearThinking()
                 } else {
                     showMessage(getString(R.string.guide_not_sure), null, speak = !auto)
                 }
@@ -258,6 +320,7 @@ class GuideService : AccessibilityService() {
         shownOnWeb = snap.host != null
         val c = Card(title, body, footer, reply.caution, step, total, node.text ?: node.desc)
         card = c
+        uiSeq++
         showCard(result.rect, c, body)
         // The bubble must not sit on the element the user is told to press.
         bubble?.avoid(result.rect)
@@ -298,6 +361,7 @@ class GuideService : AccessibilityService() {
         shown = null
         shownRect = null
         card = null
+        uiSeq++
         highlight?.showMove(below, title, say.takeIf { it != title }, footer)
         bubble?.restore()
         bubble?.state = BubbleWindow.State.ACTIVE
@@ -351,6 +415,8 @@ class GuideService : AccessibilityService() {
             Log.i(TAG, "press on a repeat step: waiting for the next press")
             return
         }
+        // The user pressed the ring: the next screen change is progress, analyse it quickly.
+        actedFast = true
         // Fields and toggles change in place; only buttons and links are expected to move on.
         if (stuckSaid || target.role !in MOVES_ON) return
         val hashAtTap = analysedHash
@@ -403,22 +469,26 @@ class GuideService : AccessibilityService() {
         shownRect = null
         card = null
         moving = false
+        val mySeq = ++uiSeq
         highlight?.showMessage(title, body)
         bubble?.state = if (sessionActive) BubbleWindow.State.ACTIVE else BubbleWindow.State.IDLE
-        if (speak) {
-            speaker?.speak(listOfNotNull(title, body).joinToString(". "))
-            lastSpoken = null
-        }
+        if (speak) speaker?.speak(listOfNotNull(title, body).joinToString(". "))
+        // The instruction card is gone: the next instruction must be spoken even if it repeats
+        // the one before the message.
+        lastSpoken = null
         Log.i(TAG, "message: $title")
         messageTimeout?.cancel()
         messageTimeout = scope.launch {
             delay(MESSAGE_MS)
-            if (highlight?.isShowingTarget == false) highlight?.hide()
+            // Only hide this message, never a newer card (a move card or a thinking card).
+            if (uiSeq == mySeq && highlight?.isShowingTarget == false) highlight?.hide()
         }
     }
 
     private fun endSession() {
         sessionActive = false
+        generation++
+        actedFast = false
         analysis?.cancel()
         settle?.cancel()
         messageTimeout?.cancel()
@@ -455,7 +525,13 @@ class GuideService : AccessibilityService() {
         // Events are only acted on inside a session; nothing is read outside one.
         if (!sessionActive || event == null) return
         if (event.packageName == packageName) return
+        val pkg = event.packageName?.toString()
+        // The keyboard and the system bars are transient: ScreenReader only reads application
+        // windows, so their events can never change what we read. They must not restart the
+        // debounce (a blinking clock or typing would postpone or trigger re-analysis).
+        if (pkg == SYSTEM_UI || (pkg != null && pkg == imePkg)) return
         if (event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            actionSeq++
             onViewClicked(event)
             return
         }
@@ -467,8 +543,9 @@ class GuideService : AccessibilityService() {
         // While a ring is up the first pass is quick and only re-positions it (no model call),
         // so the ring keeps up with scrolling and with pages whose layout shifts.
         val tracking = shown != null
-        val quiet = if (tracking) TRACK_MS else SETTLE_MS
-        val cap = if (tracking) MAX_TRACK_MS else MAX_SETTLE_MS
+        // After a clear user action the new screen gets the short settle (still capped).
+        val quiet = if (tracking) TRACK_MS else if (actedFast) ACT_SETTLE_MS else SETTLE_MS
+        val cap = if (tracking) MAX_TRACK_MS else if (actedFast) MAX_ACT_SETTLE_MS else MAX_SETTLE_MS
         val wait = minOf(quiet, (firstPendingEventAt + cap - now).coerceAtLeast(0L))
         settle?.cancel()
         settle = scope.launch {
@@ -527,14 +604,18 @@ class GuideService : AccessibilityService() {
                 // points at nothing now) and give the new screen the normal settle time
                 // before spending a model call on it. With the ring down, later events use
                 // the capped debounce, so a page that never goes quiet cannot postpone this.
+                // The ringed element going away means the user acted: use the short settle.
                 shown = null
                 shownRect = null
+                card = null
                 stuckCheck?.cancel()
-                highlight?.hide()
+                actedFast = true
+                // Not a blank screen while we wait: a quiet "looking" card replaces the old step.
+                showThinking()
                 firstPendingEventAt = SystemClock.elapsedRealtime()
                 settle?.cancel()
                 settle = scope.launch {
-                    delay(SETTLE_MS)
+                    delay(ACT_SETTLE_MS)
                     firstPendingEventAt = 0L
                     onScreenSettled()
                 }
@@ -547,8 +628,10 @@ class GuideService : AccessibilityService() {
         val sinceLast = SystemClock.elapsedRealtime() - lastAnalysisAt
         // Back off when automatic calls keep coming back unsure (a carousel page the model
         // cannot help with): 1.5 s, 3 s, 6 s ... 24 s. A ring or a bubble tap resets it.
+        // The first analysis after a clear user action is not rate limited (it is not a storm:
+        // it needs a press or a ring that went away); the back-off still applies to the rest.
         val minInterval = MIN_AUTO_INTERVAL_MS shl autoMisses.coerceAtMost(4)
-        if (sinceLast < minInterval) {
+        if (!actedFast && sinceLast < minInterval) {
             settle?.cancel()
             settle = scope.launch {
                 delay(minInterval - sinceLast)
@@ -556,7 +639,7 @@ class GuideService : AccessibilityService() {
             }
             return
         }
-        if (analysis?.isActive == true) {
+        if (analysis?.isActive == true && !actedFast) {
             // A model call is in flight (it takes a second or two). Let it finish instead of
             // cancelling and restarting on every twitch of a page with a carousel; its answer
             // is placed on the fresh screen when it arrives.
@@ -572,8 +655,12 @@ class GuideService : AccessibilityService() {
         shownRect = null
         stuckCheck?.cancel()
         // A "move the screen" card stays up while the next answer is fetched: no flicker.
-        if (!moving) highlight?.hide()
-        analyse(auto = true, preRead = snap)
+        // Otherwise a quiet "looking" card shows the guide is working. If a call was in flight
+        // for an older screen (the user acted meanwhile), analyse() cancels it and its
+        // generation makes any late answer harmless.
+        val keepMoveCard = moving
+        card = null
+        analyse(auto = true, preRead = snap, thinkingCard = !keepMoveCard)
     }
 
     private fun logSnapshot(snap: ScreenSnapshot) {
@@ -613,16 +700,21 @@ class GuideService : AccessibilityService() {
 
     companion object {
         const val TAG = "ChiDay"
+        private const val SYSTEM_UI = "com.android.systemui"
         private const val SETTLE_MS = 800L
         private const val MAX_SETTLE_MS = 2500L
-        private const val TRACK_MS = 250L
+        private const val TRACK_MS = 200L
+        /** Settle after the user clearly acted (pressed the ring / the ringed element went away). */
+        private const val ACT_SETTLE_MS = 350L
+        private const val MAX_ACT_SETTLE_MS = 1200L
+        private const val THINKING_MAX_MS = 15000L
         private const val MAX_TRACK_MS = 600L
         private const val MIN_AUTO_INTERVAL_MS = 1500L
         private const val MESSAGE_MS = 7000L
         private const val IDLE_SESSION_MS = 5 * 60 * 1000L
         private const val STUCK_MS = 4000L
-        private const val ADVANCE_MS = 1500L
-        private const val MISS_CHECK_MS = 900L
+        private const val ADVANCE_MS = 900L
+        private const val MISS_CHECK_MS = 600L
         private const val IN_FLIGHT_POLL_MS = 500L
         private const val STUCK_WEB_MS = 8000L
         private val MOVES_ON = setOf("button", "link", "item")

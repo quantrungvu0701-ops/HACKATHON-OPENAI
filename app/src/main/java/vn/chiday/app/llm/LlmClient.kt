@@ -4,6 +4,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.Json
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.ConnectionPool
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -35,6 +36,9 @@ object Llm {
         // A pooled connection can die silently while idle (NAT, mobile networks). HTTP/2 pings
         // find that out in seconds instead of waiting for the read timeout.
         .pingInterval(4, TimeUnit.SECONDS)
+        // Keep the warmed connection longer than OkHttp's 5-minute default: a user may read a
+        // page for a while between steps, and a new TLS handshake adds hundreds of ms.
+        .connectionPool(ConnectionPool(5, 10, TimeUnit.MINUTES))
         .build()
 
     fun clientFor(settings: LlmSettings): LlmClient = when (settings.provider) {

@@ -14,7 +14,9 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.view.View
+import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityWindowInfo
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
@@ -46,6 +48,29 @@ class HighlightWindow(private val service: AccessibilityService) {
         title = "ChiDayHighlight"
         layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
     }
+
+    init {
+        view.keyboardTopProvider = { imeTop() }
+    }
+
+    /** Top of the soft keyboard in screen pixels, or null when no keyboard is showing. */
+    private fun imeTop(): Int? {
+        val r = Rect()
+        for (w in service.windows) {
+            if (w.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD) {
+                w.getBoundsInScreen(r)
+                if (!r.isEmpty) return r.top
+            }
+        }
+        return null
+    }
+
+    /**
+     * Where the instruction card is (absolute screen pixels) while one is shown, so the bubble
+     * can stay off it: pass it as the second argument of BubbleWindow.avoid.
+     */
+    val cardBoundsOnScreen: Rect?
+        get() = if (isShowing) view.cardOnScreen() else null
 
     /** True while a target ring is on screen. */
     val isShowingTarget: Boolean get() = isShowing && view.target != null
@@ -122,6 +147,7 @@ class HighlightWindow(private val service: AccessibilityService) {
     fun moveTarget(target: Rect) {
         if (!isShowingTarget || view.target == target) return
         view.target = Rect(target)
+        view.refreshKeyboard()
         view.invalidate()
     }
 
@@ -133,6 +159,7 @@ class HighlightWindow(private val service: AccessibilityService) {
 
     private fun reveal() {
         attach()
+        view.refreshKeyboard()
         view.visibility = View.VISIBLE
         view.invalidate()
     }
@@ -158,7 +185,38 @@ class HighlightWindow(private val service: AccessibilityService) {
         private var bodyLayout: StaticLayout? = null
         private var footerLayout: StaticLayout? = null
         private var cautionLayout: StaticLayout? = null
-        private var layoutWidth = 0
+
+        /** Cache key of the text layouts: width and size variant (line limits). */
+        private var layoutKey = -1L
+        private var textVersion = 0
+
+        /** Supplies the soft keyboard's top (screen px), or null; polled at most every 500 ms. */
+        var keyboardTopProvider: (() -> Int?)? = null
+        private var kbTopScreen: Int? = null
+        private var kbCheckedAt = 0L
+
+        // Card placement, cached between frames (onDraw runs every frame for the pulse).
+        private val placedRect = RectF()
+        private var placedVariant = 0
+        private var placedValid = false
+        private val pkTarget = Rect()
+        private var pkHasTarget = false
+        private var pkMoveDir = 0
+        private var pkW = 0
+        private var pkH = 0
+        private var pkOx = 0
+        private var pkOy = 0
+        private var pkKb = 0
+        private var pkInsTop = 0
+        private var pkInsBottom = 0
+        private var pkIme = 0
+        private var pkVersion = -1
+
+        private val cardMargin = 16f * d
+        private val padH = 20f * d
+        private val padV = 16f * d
+        private val gap = 6f * d
+        private val segH = 6f * d
 
         private val dim = Paint().apply { color = 0x8C0D1322.toInt() }
         private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -207,24 +265,185 @@ class HighlightWindow(private val service: AccessibilityService) {
             this.total = total?.takeIf { step != null && it in 2..MAX_SEGMENTS && step in 1..it }
             this.mark = mark?.trim()?.takeIf { it.length >= 2 }
             this.cautionNote = cautionNote?.takeIf { it.isNotBlank() }
-            layoutWidth = 0 // rebuild text layouts on next draw
+            layoutKey = -1L // rebuild text layouts on next draw
+            textVersion++
             invalidate()
         }
 
-        private fun buildLayouts(width: Int) {
-            if (width == layoutWidth || width <= 0) return
-            layoutWidth = width
+        fun refreshKeyboard() {
+            kbCheckedAt = SystemClock.uptimeMillis()
+            kbTopScreen = runCatching { keyboardTopProvider?.invoke() }.getOrNull()
+        }
+
+        private fun innerWidth(): Int = (width - 2 * cardMargin - 2 * padH).toInt()
+
+        /** Builds the text layouts for [width] at size variant [v] (see TITLE_LINES/BODY_LINES). */
+        private fun buildLayouts(width: Int, v: Int) {
+            if (width <= 0) return
+            val key = width.toLong() * 16 + v
+            if (key == layoutKey) return
+            layoutKey = key
+            val compact = v == COMPACT
             fun make(text: CharSequence, paint: TextPaint, maxLines: Int, w: Int = width) =
-                StaticLayout.Builder.obtain(text, 0, text.length, paint, w)
+                StaticLayout.Builder.obtain(text, 0, text.length, paint, w.coerceAtLeast(1))
                     .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                     .setLineSpacing(0f, 1.12f)
                     .setMaxLines(maxLines)
                     .setEllipsize(android.text.TextUtils.TruncateAt.END)
                     .build()
-            titleLayout = make(markTitle(), titlePaint, 3)
-            bodyLayout = body?.let { make(it, bodyPaint, 5) }
-            footerLayout = footer?.let { make(it, footerPaint, 1) }
-            cautionLayout = cautionNote?.let { make(it, cautionPaint, 3, width - (2 * BAND_PAD_DP * d).toInt()) }
+            titleLayout = make(markTitle(), titlePaint, TITLE_LINES[v])
+            bodyLayout = if (BODY_LINES[v] > 0) body?.let { make(it, bodyPaint, BODY_LINES[v]) } else null
+            footerLayout = if (compact) null else footer?.let { make(it, footerPaint, 1) }
+            cautionLayout = cautionNote?.let {
+                make(it, cautionPaint, if (compact) 1 else 3, width - (2 * BAND_PAD_DP * d).toInt())
+            }
+        }
+
+        private fun showSegs(v: Int) = v != COMPACT && total != null
+
+        /** Card height at size variant [v]; leaves that variant's layouts built. */
+        private fun cardHeight(v: Int): Float {
+            buildLayouts(innerWidth(), v)
+            val tl = titleLayout ?: return 0f
+            val bandPad = BAND_PAD_DP * d
+            var contentH = tl.height.toFloat()
+            cautionLayout?.let { contentH += it.height + 2 * bandPad + gap * 2 }
+            footerLayout?.let { contentH += it.height + gap }
+            if (showSegs(v)) contentH += segH + gap * 2
+            bodyLayout?.let { contentH += it.height + gap }
+            return contentH + 2 * padV
+        }
+
+        /** Card rectangle in absolute screen pixels, or null when there is no card. */
+        fun cardOnScreen(): Rect? {
+            if (!ensurePlacement()) return null
+            return Rect(
+                (placedRect.left + origin[0]).toInt(), (placedRect.top + origin[1]).toInt(),
+                (placedRect.right + origin[0]).toInt(), (placedRect.bottom + origin[1]).toInt(),
+            )
+        }
+
+        /** Recomputes the card placement only when an input to it changed. */
+        private fun ensurePlacement(): Boolean {
+            if (title.isEmpty() || width <= 0 || height <= 0) return false
+            getLocationOnScreen(origin)
+            val t = target
+            val kb = kbTopScreen ?: Int.MAX_VALUE
+            val wi = rootWindowInsets
+            val ins = wi?.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+            val insTop = ins?.top ?: -1
+            val insBottom = ins?.bottom ?: -1
+            val ime = wi?.getInsets(WindowInsets.Type.ime())?.bottom ?: 0
+            val sameTarget = if (t == null) !pkHasTarget else pkHasTarget && pkTarget == t
+            if (placedValid && sameTarget && pkVersion == textVersion && pkMoveDir == moveDir &&
+                pkW == width && pkH == height && pkOx == origin[0] && pkOy == origin[1] && pkKb == kb &&
+                pkInsTop == insTop && pkInsBottom == insBottom && pkIme == ime
+            ) return true
+            pkHasTarget = t != null
+            if (t != null) pkTarget.set(t)
+            pkVersion = textVersion
+            pkMoveDir = moveDir
+            pkW = width
+            pkH = height
+            pkOx = origin[0]
+            pkOy = origin[1]
+            pkKb = kb
+            pkInsTop = insTop
+            pkInsBottom = insBottom
+            pkIme = ime
+            place(t, kb, insTop, insBottom, ime)
+            placedValid = true
+            return true
+        }
+
+        /**
+         * Puts the card in the free band above or below the keep-out area (target ring + pulse +
+         * arrow, or the chevrons), inside the system bars and above the keyboard. Prefers the
+         * band farther from the target; shrinks the card before overlapping anything.
+         */
+        private fun place(t: Rect?, kb: Int, insTop: Int, insBottom: Int, ime: Int) {
+            val safeTop = if (insTop >= 0) max(insTop.toFloat(), 24f * d) + 12f * d else 56f * d
+            var safeBottom = if (insBottom >= 0) height - max(insBottom.toFloat(), 16f * d) - 16f * d else height - 72f * d
+            if (ime > 0) safeBottom = min(safeBottom, height - ime - 8f * d)
+            if (kb != Int.MAX_VALUE) safeBottom = min(safeBottom, (kb - origin[1]).toFloat() - 8f * d)
+
+            val keep = keepOut(t)
+            val aboveTop = safeTop
+            val aboveBottom: Float
+            val belowTop: Float
+            val belowBottom = safeBottom
+            val preferBelow: Boolean
+            if (keep == null) {
+                aboveBottom = safeTop // no band above: the card goes at the bottom as before
+                belowTop = safeTop
+                preferBelow = true
+            } else {
+                aboveBottom = min(keep.top, safeBottom)
+                belowTop = max(keep.bottom, safeTop)
+                preferBelow = if (t != null) (t.centerY() - origin[1]) < height * 0.55f else moveDir < 0
+            }
+            val aboveH = aboveBottom - aboveTop
+            val belowH = belowBottom - belowTop
+
+            for (v in TITLE_LINES.indices) {
+                val h = cardHeight(v)
+                for (k in 0..1) {
+                    val below = if (k == 0) preferBelow else !preferBelow
+                    if (below && h <= belowH) { setPlaced(v, belowBottom - h, h); return }
+                    if (!below && h <= aboveH) { setPlaced(v, aboveTop, h); return }
+                }
+            }
+            // Nothing fits (huge target or keyboard): compact card in the larger band.
+            val h = cardHeight(COMPACT)
+            val top = if (belowH >= aboveH) belowBottom - h else aboveTop
+            setPlaced(COMPACT, top.coerceIn(0f, max(0f, height - h)), h)
+        }
+
+        private fun setPlaced(v: Int, top: Float, h: Float) {
+            placedVariant = v
+            placedRect.set(cardMargin, top, width - cardMargin, top + h)
+        }
+
+        /** The area the card must not cover, in view coordinates; null when nothing is pointed at. */
+        private fun keepOut(t: Rect?): RectF? {
+            if (t != null) {
+                val pad = 8f * d
+                val k = RectF(t.left - origin[0] - pad, t.top - origin[1] - pad, t.right - origin[0] + pad, t.bottom - origin[1] + pad)
+                val small = k.width() < SMALL_DP * d || k.height() < SMALL_DP * d
+                val cx = k.centerX()
+                val cy = k.centerY()
+                val tip = max(k.width(), k.height()) / 2f + 14f * d
+                k.inset(-KEEP_DP * d, -KEEP_DP * d)
+                if (small) {
+                    // Same geometry as drawArrow, at its farthest bob.
+                    val a = arrowAngle(cx, cy)
+                    val ux = cos(a)
+                    val uy = sin(a)
+                    val tail = tip + 10f * d + 64f * d
+                    val box = RectF(
+                        min(cx + ux * tip, cx + ux * tail), min(cy + uy * tip, cy + uy * tail),
+                        max(cx + ux * tip, cx + ux * tail), max(cy + uy * tip, cy + uy * tail),
+                    )
+                    box.inset(-28f * d, -28f * d)
+                    k.union(box)
+                }
+                return k
+            }
+            if (moveDir > 0) {
+                val base = height - 250f * d
+                return RectF(0f, base - 16f * d, width.toFloat(), base + 2 * 28f * d + 30f * d + 14f * d + 16f * d)
+            }
+            if (moveDir < 0) {
+                val base = 150f * d
+                return RectF(0f, base - 2 * 28f * d - 30f * d - 14f * d - 16f * d, width.toFloat(), base + 16f * d)
+            }
+            return null
+        }
+
+        private fun arrowAngle(cx: Float, cy: Float): Float {
+            var ang = atan2(height / 2f - cy, width / 2f - cx)
+            if (hypot(width / 2f - cx, height / 2f - cy) < 40f * d) ang = (Math.PI / 2).toFloat()
+            return ang
         }
 
         /**
@@ -291,8 +510,11 @@ class HighlightWindow(private val service: AccessibilityService) {
             }
 
             if (t == null && moveDir != 0) drawMoveHint(canvas, accent)
-            drawCard(canvas, accent)
+            // Keyboard position: polled at most every KB_REFRESH_MS, never per frame.
+            if (SystemClock.uptimeMillis() - kbCheckedAt >= KB_REFRESH_MS) refreshKeyboard()
+            drawCard(canvas)
             if (t != null || moveDir != 0) postInvalidateOnAnimation()
+            else if (title.isNotEmpty()) postInvalidateDelayed(KB_REFRESH_MS) // card only: follow the keyboard
         }
 
         /** Three bobbing chevrons at the edge the content is beyond. */
@@ -323,8 +545,7 @@ class HighlightWindow(private val service: AccessibilityService) {
         private fun drawArrow(canvas: Canvas, accent: Int, phase: Float) {
             val cx = hole.centerX()
             val cy = hole.centerY()
-            var ang = atan2(height / 2f - cy, width / 2f - cx)
-            if (hypot(width / 2f - cx, height / 2f - cy) < 40f * d) ang = (Math.PI / 2).toFloat()
+            val ang = arrowAngle(cx, cy)
             val bob = (sin(phase * 2 * Math.PI).toFloat() + 1f) * 5f * d
             val tipDist = max(hole.width(), hole.height()) / 2f + 14f * d + bob
             val len = 64f * d
@@ -355,30 +576,14 @@ class HighlightWindow(private val service: AccessibilityService) {
             canvas.drawPath(path, arrowEdge)
         }
 
-        private fun drawCard(canvas: Canvas, accent: Int) {
-            if (title.isEmpty()) return
-            val margin = 16f * d
-            val padH = 20f * d
-            val padV = 16f * d
-            buildLayouts((width - 2 * margin - 2 * padH).toInt())
+        private fun drawCard(canvas: Canvas) {
+            // Placement is cached; it is recomputed only when target, text, size or keyboard change.
+            if (!ensurePlacement()) return
+            buildLayouts(innerWidth(), placedVariant)
             val tl = titleLayout ?: return
-            val gap = 6f * d
             val bandPad = BAND_PAD_DP * d
-            val segH = 6f * d
-            val segs = total
-            var contentH = tl.height.toFloat()
-            cautionLayout?.let { contentH += it.height + 2 * bandPad + gap * 2 }
-            footerLayout?.let { contentH += it.height + gap }
-            if (segs != null) contentH += segH + gap * 2
-            bodyLayout?.let { contentH += it.height + gap }
-            val cardH = contentH + 2 * padV
-
-            // Keep the card away from the target: bottom of the screen unless the target is there.
-            val t = target
-            val targetCentreY = if (t != null) (t.centerY() - origin[1]).toFloat() else 0f
-            val atBottom = if (moveDir != 0) moveDir < 0 else t == null || targetCentreY < height * 0.55f
-            val top = if (atBottom) height - cardH - 72f * d else 56f * d
-            cardRect.set(margin, top, width - margin, top + cardH)
+            val segs = if (showSegs(placedVariant)) total else null
+            cardRect.set(placedRect)
 
             val r = 22f * d
             canvas.drawRoundRect(cardRect, r, r, cardFill)
@@ -386,6 +591,7 @@ class HighlightWindow(private val service: AccessibilityService) {
             canvas.drawRoundRect(cardRect, r, r, cardEdge)
 
             canvas.save()
+            canvas.clipRect(cardRect) // text never spills outside the card
             canvas.translate(cardRect.left + padH, cardRect.top + padV)
             val innerW = cardRect.width() - 2 * padH
             cautionLayout?.let {
@@ -432,6 +638,15 @@ class HighlightWindow(private val service: AccessibilityService) {
             const val INK_SOFT = 0xFF5D6880.toInt()
             const val PULSE_MS = 1400L
             const val SMALL_DP = 72f
+
+            /** Keep-out margin around the ring: pulse growth (22) + ring stroke + air. */
+            const val KEEP_DP = 34f
+            const val KB_REFRESH_MS = 500L
+
+            /** Card size variants, largest first: title and body line limits. */
+            val TITLE_LINES = intArrayOf(3, 3, 3, 3, 2, 1)
+            val BODY_LINES = intArrayOf(5, 3, 1, 0, 0, 0)
+            const val COMPACT = 5
         }
     }
 }

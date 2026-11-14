@@ -54,23 +54,53 @@ data class Playbook(
      * cheap string-matching half of "identify"; the model breaks ties and has the final say.
      */
     fun likelyStep(snapshot: ScreenSnapshot, lastStepN: Int? = null, lastStepShown: Int = 0): Step? {
+        val scored = score(snapshot)
+        if (lastStepN == null) {
+            val best = scored.maxOfOrNull { it.second } ?: return null
+            return scored.filter { it.second == best }.minByOrNull { it.first.n }?.first
+        }
+        // Progress only moves forward: headers, search boxes and menus of step 1 often stay
+        // visible on later pages, so an earlier step matching is no reason to go back. Only
+        // the current step and later ones are candidates. The current step is dropped once
+        // it has been pressed as often as it needs (a `repeat` step) and a later one matches.
+        var forward = scored.filter { it.first.n >= lastStepN }
+        val current = steps.firstOrNull { it.n == lastStepN }
+        if (current != null && lastStepShown >= current.repeat && forward.any { it.first.n > lastStepN }) {
+            forward = forward.filter { it.first.n > lastStepN }
+        }
+        val best = forward.maxOfOrNull { it.second } ?: return null
+        val tied = forward.filter { it.second == best }.map { it.first }
+        // Several steps can share one screen (fill a field, then the next, then press the
+        // button). Session progress breaks the tie: the current step while it still wants
+        // presses, else the step after it, else the current one again, else the lowest.
+        tied.firstOrNull { it.n == lastStepN && lastStepShown < it.repeat }?.let { return it }
+        tied.firstOrNull { it.n == lastStepN + 1 }?.let { return it }
+        tied.firstOrNull { it.n == lastStepN }?.let { return it }
+        return tied.minByOrNull { it.n }
+    }
+
+    /**
+     * Strong evidence that the user went back to the earlier step [n]: all of its signals are
+     * on screen, the current step [lastStepN] has signals and none of them are, and no step
+     * from [lastStepN] on matches at all.
+     */
+    fun clearlyBackAt(snapshot: ScreenSnapshot, n: Int, lastStepN: Int): Boolean {
+        if (n >= lastStepN) return false
+        val current = steps.firstOrNull { it.n == lastStepN } ?: return false
+        if (current.signals.none { it.isNotBlank() }) return false
+        val scored = score(snapshot)
+        if (scored.any { it.first.n >= lastStepN }) return false
+        return scored.any { it.first.n == n && it.second >= 1.0 }
+    }
+
+    /** Steps with at least one signal on screen, with the share of their signals found. */
+    private fun score(snapshot: ScreenSnapshot): List<Pair<Step, Double>> {
         val screenText = snapshot.nodes.joinToString("\n") { listOfNotNull(it.text, it.desc, it.hint).joinToString(" ") }.lowercase()
-        val scored = steps.mapNotNull { step ->
+        return steps.mapNotNull { step ->
             val signals = step.signals.filter { it.isNotBlank() }
             if (signals.isEmpty()) return@mapNotNull null
             val hit = signals.count { screenText.contains(it.lowercase()) }
             if (hit == 0) null else step to hit.toDouble() / signals.size
         }
-        val best = scored.maxOfOrNull { it.second } ?: return null
-        val tied = scored.filter { it.second == best }.map { it.first }
-        // Several steps can share one screen (fill a field, then the next, then press the
-        // button). Session progress breaks the tie: the step after the last one shown, else
-        // the last one again, else the first.
-        if (lastStepN != null) {
-            tied.firstOrNull { it.n == lastStepN && lastStepShown < it.repeat }?.let { return it }
-            tied.firstOrNull { it.n == lastStepN + 1 }?.let { return it }
-            tied.firstOrNull { it.n == lastStepN }?.let { return it }
-        }
-        return tied.minByOrNull { it.n }
     }
 }
