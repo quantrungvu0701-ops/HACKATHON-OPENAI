@@ -62,3 +62,4 @@ before every push.
 - Follow mode no longer cancels a model call in flight; the answer is placed on the fresh screen. Goal of another service no longer overrides the playbook of the app on screen. Both checked on the emulator with gpt-4.1 on vnpost.vn.
 - dichvucong.gov.vn does not load from the dev computer's network: check that flow on the phone only.
 - Model calls: 7 s timeout + one retry on a fresh connection, HTTP/2 pings, warm-up on service start and «Bắt đầu». kill_reopen_test 4/5 with gpt-4.1 on the emulator.
+- 14:42 All three pitch cases verified on the phone with gpt-4.1 (see PROGRESS.md). Phone settings: OpenAI, https://api.openai.com/v1, gpt-4.1 (was pointing at the old stub). CapCut playbook rebuilt from real screens and verified; kill-and-reopen 3/3 on the phone. Remaining: DocCheck with a real card, rehearse the demo, revoke the test key after the event.
