@@ -322,14 +322,33 @@ class GuideService : AccessibilityService() {
         source.getBoundsInScreen(r)
         if (r.isEmpty) return
         val hit = r.contains(ring.centerX(), ring.centerY()) || ring.contains(r.centerX(), r.centerY())
-        // A click reported by a big container around the ring says nothing about where the finger was.
-        if (hit && r.width().toLong() * r.height() > 4L * ring.width() * ring.height()) return
         Log.i(TAG, "click at ${r.toShortString()} ring ${ring.toShortString()} hit=$hit")
         if (!hit) {
-            if (!missSaid) {
-                missSaid = true
-                feedback(getString(R.string.guide_miss))
+            // A tap elsewhere can still be progress (picking another video than the ringed
+            // one, ticking a box): if the screen changed, look again instead of scolding.
+            val hashAtTap = analysedHash
+            stuckCheck?.cancel()
+            stuckCheck = scope.launch {
+                delay(MISS_CHECK_MS)
+                if (!sessionActive || shownRect == null) return@launch
+                val now = ScreenReader.read(this@GuideService) ?: return@launch
+                if (now.hash != hashAtTap) {
+                    Log.i(TAG, "tap outside the ring changed the screen: analysing again")
+                    engine.noteUserActed()
+                    shown = null
+                    shownRect = null
+                    analyse(auto = true, preRead = now)
+                } else if (!missSaid) {
+                    missSaid = true
+                    feedback(getString(R.string.guide_miss))
+                }
             }
+            return
+        }
+        // A step done several times on one screen (Split twice): count, and wait for the rest.
+        val morePresses = engine.notePress()
+        if (morePresses) {
+            Log.i(TAG, "press on a repeat step: waiting for the next press")
             return
         }
         // Fields and toggles change in place; only buttons and links are expected to move on.
@@ -341,6 +360,17 @@ class GuideService : AccessibilityService() {
             delay(if (shownOnWeb) STUCK_WEB_MS else ADVANCE_MS)
             if (!stillThere()) return@launch
             var now = ScreenReader.read(this@GuideService) ?: return@launch
+            if (now.hash != hashAtTap) {
+                // The press changed the screen, but the ringed element is still found (an app
+                // that draws the next page over the old one, like CapCut's video picker):
+                // the user has moved on, so look again.
+                Log.i(TAG, "target pressed and the screen changed under the ring: analysing again")
+                engine.noteUserActed()
+                shown = null
+                shownRect = null
+                analyse(auto = true, preRead = now)
+                return@launch
+            }
             if (engine.nextStepIsHere(now)) {
                 // The playbook's next step is on this same screen: move on without a screen change.
                 Log.i(TAG, "target pressed, next step is on this screen: analysing again")
@@ -592,6 +622,7 @@ class GuideService : AccessibilityService() {
         private const val IDLE_SESSION_MS = 5 * 60 * 1000L
         private const val STUCK_MS = 4000L
         private const val ADVANCE_MS = 1500L
+        private const val MISS_CHECK_MS = 900L
         private const val IN_FLIGHT_POLL_MS = 500L
         private const val STUCK_WEB_MS = 8000L
         private val MOVES_ON = setOf("button", "link", "item")

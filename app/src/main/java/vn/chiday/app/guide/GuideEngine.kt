@@ -81,6 +81,9 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
     /** Number of the playbook step shown last, to tell apart steps that share a screen. */
     private var lastStepN: Int? = null
 
+    /** How many times in a row [lastStepN] has been shown (for steps with `repeat`). */
+    private var lastStepShown = 0
+
     /** The last instruction with a target, kept so [recheck] can re-place it without the model. */
     private class Pending(val reply: GuideReply, val node: UiNode, val scrollStep: Boolean, val towards: TargetResolver.Towards, val verified: Boolean)
 
@@ -97,7 +100,17 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
     fun nextStepIsHere(snapshot: ScreenSnapshot): Boolean {
         val pb = sessionPlaybook ?: return false
         val n = lastStepN ?: return false
-        return pb.appliesTo(snapshot) && pb.likelyStep(snapshot, n)?.n == n + 1
+        return pb.appliesTo(snapshot) && pb.likelyStep(snapshot, n, pressesOnStep)?.n == n + 1
+    }
+
+    /** Presses on the ring since the current step was shown (a `repeat` step needs several). */
+    private var pressesOnStep = 0
+
+    /** The user pressed the ringed target. Returns true when the step still wants more presses. */
+    fun notePress(): Boolean {
+        pressesOnStep++
+        val step = sessionPlaybook?.steps?.firstOrNull { it.n == lastStepN } ?: return false
+        return pressesOnStep < step.repeat
     }
 
     fun noteUserActed() {
@@ -107,6 +120,8 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
     fun resetSession() {
         lastStep = null
         lastStepN = null
+        lastStepShown = 0
+        pressesOnStep = 0
         sessionPlaybook = null
         pending = null
         userActed = false
@@ -130,9 +145,10 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         if (snapshot.nodes.isEmpty()) return GuideResult.NotSure("empty node list")
 
         val playbook = sessionPlaybook?.takeIf { it.appliesTo(snapshot) } ?: playbooks.select(snapshot, goal)
-        if (playbook?.id != sessionPlaybook?.id) lastStepN = null
+        if (playbook?.id != sessionPlaybook?.id) { lastStepN = null; lastStepShown = 0 }
         sessionPlaybook = playbook
-        val likely = playbook?.likelyStep(snapshot, lastStepN)
+        // A `repeat` step is left once its target has been pressed that many times.
+        val likely = playbook?.likelyStep(snapshot, lastStepN, pressesOnStep)
         Log.i(TAG, "playbook=${playbook?.id ?: "none"} likelyStep=${likely?.n ?: "-"}")
 
         val raw = try {
@@ -171,7 +187,12 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         val result = place(reply, snapshot, scrollStep, towards, verified = playbook?.verified != null)
         if (result is GuideResult.Show || result is GuideResult.Move) {
             lastStep = reply.subtitle ?: reply.say
-            if (playbook != null) lastStepN = reply.step ?: lastStepN
+            if (playbook != null) {
+                val n = reply.step ?: lastStepN
+                lastStepShown = if (n == lastStepN) lastStepShown + 1 else 1
+                if (n != lastStepN) pressesOnStep = 0
+                lastStepN = n
+            }
         }
         return result
     }
