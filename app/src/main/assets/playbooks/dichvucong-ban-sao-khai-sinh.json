@@ -37,20 +37,21 @@
     {
       "n": 3,
       "signals": [
-        "Nộp hồ sơ",
-        "Chọn Phường/ Xã",
         "Tên thủ tục",
         "Mã thủ tục",
-        "Lĩnh vực",
-        "Đối tượng thực hiện",
-        "Cơ quan có thẩm quyền",
-        "Trình Tự Thực Hiện",
-        "Cách Thức Thực Hiện",
-        "Thành phần hồ sơ"
+        "Nộp hồ sơ",
+        "Thành phần hồ sơ",
+        "Tên giấy tờ",
+        "Số lượng"
       ],
-      "do": "Kéo màn hình xuống tới phần «Thành phần hồ sơ». Đó là danh sách giấy tờ bác cần mang theo",
-      "target_hint": "Thành phần hồ sơ",
-      "pitfall": "Chưa bấm nút cam «Nộp hồ sơ» ở trên: nút đó bắt đăng nhập VNeID và nộp phí. Muốn nộp trực tuyến thì nhờ con cháu ngồi cùng."
+      "do": "Kéo màn hình xuống tới phần «Thành phần hồ sơ» (một đề mục chữ, không phải nút bấm). Các dòng «Tên thủ tục», «Mã thủ tục», «Trình tự thực hiện» là phần trên của trang: bác CHƯA tới, bác kéo tiếp xuống. Chỉ khi thấy chữ «Thành phần hồ sơ» hoặc các dòng «Tên giấy tờ», «Số lượng» là bác đã tới: bác đọc tên từng giấy tờ, không cần bấm gì",
+      "target_hint": "chữ «Thành phần hồ sơ» (chỉ để đọc); khi đã vào trong phần đó thì khoanh dòng chữ dưới «Tên giấy tờ» đầu tiên. Không bao giờ bảo bấm vào các dòng này",
+      "pitfall": "Chưa bấm nút cam «Nộp hồ sơ» ở trên: nút đó bắt đăng nhập VNeID và nộp phí. Muốn nộp trực tuyến thì nhờ con cháu ngồi cùng.",
+      "arrive": [
+        "Thành phần hồ sơ",
+        "Tên giấy tờ"
+      ],
+      "not_yet": "Bác kéo màn hình xuống tiếp, tới chữ «Thành phần hồ sơ»."
     }
   ]
 }

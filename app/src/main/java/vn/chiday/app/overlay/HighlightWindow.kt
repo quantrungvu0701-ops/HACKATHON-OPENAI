@@ -114,10 +114,12 @@ class HighlightWindow(private val service: AccessibilityService) {
         total: Int? = null,
         mark: String? = null,
         cautionNote: String? = null,
+        look: Boolean = false,
     ) {
         view.target = Rect(target)
         view.moveDir = 0
         view.caution = caution
+        view.look = look
         view.setCard(title, body, footer, step, total, mark, cautionNote.takeIf { caution })
         reveal()
     }
@@ -128,6 +130,7 @@ class HighlightWindow(private val service: AccessibilityService) {
      */
     fun showMove(below: Boolean, title: String, body: String?, footer: String?) {
         view.target = null
+        view.look = false
         view.moveDir = if (below) 1 else -1
         view.caution = false
         view.setCard(title, body, footer, null, null, null, null)
@@ -137,6 +140,7 @@ class HighlightWindow(private val service: AccessibilityService) {
     /** Card only, no ring: "not sure", errors. */
     fun showMessage(title: String, body: String? = null) {
         view.target = null
+        view.look = false
         view.moveDir = 0
         view.caution = false
         view.setCard(title, body, null, null, null, null, null)
@@ -170,6 +174,9 @@ class HighlightWindow(private val service: AccessibilityService) {
 
         var target: Rect? = null
         var caution = false
+
+        /** The target is text to read, not a button: dashed frame, no pulse, no arrow. */
+        var look = false
 
         /** 0 = none, 1 = "more below" chevrons at the bottom, -1 = "more above" at the top. */
         var moveDir = 0
@@ -220,6 +227,7 @@ class HighlightWindow(private val service: AccessibilityService) {
 
         private val dim = Paint().apply { color = 0x8C0D1322.toInt() }
         private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+        private val dash = android.graphics.DashPathEffect(floatArrayOf(18f * d, 12f * d), 0f)
         private val halo = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
         private val arrow = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
         private val arrowEdge = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -495,18 +503,20 @@ class HighlightWindow(private val service: AccessibilityService) {
                 ring.color = accent
                 ring.alpha = 255
                 ring.strokeWidth = 5f * d
+                ring.pathEffect = if (look) dash else null
                 canvas.drawRoundRect(hole, radius, radius, ring)
+                ring.pathEffect = null
 
                 // Pulse: a second ring that grows and fades.
                 val phase = (SystemClock.uptimeMillis() % PULSE_MS) / PULSE_MS.toFloat()
                 val grow = phase * 22f * d
-                ring.alpha = ((1f - phase) * 200).toInt()
+                ring.alpha = if (look) 0 else ((1f - phase) * 200).toInt()
                 ring.strokeWidth = 4f * d
                 hole.inset(-grow, -grow)
                 canvas.drawRoundRect(hole, radius + grow, radius + grow, ring)
                 hole.inset(grow, grow)
 
-                if (min(hole.width(), hole.height()) < SMALL_DP * d && max(hole.width(), hole.height()) < 3 * SMALL_DP * d) drawArrow(canvas, accent, phase)
+                if (!look && min(hole.width(), hole.height()) < SMALL_DP * d && max(hole.width(), hole.height()) < 3 * SMALL_DP * d) drawArrow(canvas, accent, phase)
             }
 
             if (t == null && moveDir != 0) drawMoveHint(canvas, accent)

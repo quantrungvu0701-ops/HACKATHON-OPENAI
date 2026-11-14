@@ -218,12 +218,25 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
             val step = playbook.steps.firstOrNull { it.n == reply.step }
             reply = reply.copy(
                 totalSteps = playbook.steps.size,
+                step = reply.step?.coerceIn(1, playbook.steps.size.coerceAtLeast(1)),
                 service = reply.service ?: playbook.service,
                 caution = reply.caution || step?.caution == true,
             )
         }
+        // "scroll" = the destination is not on screen yet: chevrons only, never a frame on
+        // something else (it reads as "this is it"). "read"/"look" frame the text to read.
+        if (reply.action?.trim()?.lowercase() == "scroll") reply = reply.copy(target = null)
         val step = playbook?.steps?.firstOrNull { it.n == reply.step }
-        val scrollStep = reply.action?.trim()?.lowercase() == "scroll" || TargetResolver.isScrollStep(step?.action)
+        if (step != null && step.arrive.isNotEmpty()) {
+            val onScreen = snapshot.nodes.joinToString("\n") { listOfNotNull(it.text, it.desc).joinToString(" ") }.lowercase()
+            val arrived = step.arrive.any { onScreen.contains(it.lowercase()) }
+            if (!arrived) {
+                Log.i(TAG, "step ${step.n}: none of ${step.arrive} on screen: scroll further, not read")
+                val words = step.notYet ?: reply.say
+                reply = reply.copy(target = null, action = "scroll", say = words, subtitle = words)
+            }
+        }
+        val scrollStep = reply.action?.trim()?.lowercase() in READ_ACTIONS || TargetResolver.isScrollStep(step?.action)
         val towards = TargetResolver.scrollTowards(step?.action ?: reply.subtitle ?: reply.say)
         val result = place(reply, snapshot, scrollStep, towards, verified = playbook?.verified != null)
         if (result is GuideResult.Show || result is GuideResult.Move) {
@@ -329,6 +342,8 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
     companion object {
         private const val TAG = "ChiDay"
         const val MIN_CONFIDENCE = 0.5
+        /** Actions that mean "look here", never "press here". */
+        private val READ_ACTIONS = setOf("scroll", "read", "look")
         const val CALL_TIMEOUT_MS = 7_000L
 
         // Prompt contract from AGENTS.md. English instructions, Vietnamese output.
@@ -349,8 +364,8 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
                 "shows the user went back to the start; text from earlier steps (headers, search " +
                 "boxes, menus) often stays visible on later screens and is no reason to go back. " +
                 "If what the user needs is not on screen yet, or the step is only to scroll or read, " +
-                "set action=\"scroll\", tell the user which way to move the screen, do not say " +
-                "\"bấm\", and set target to the element to read if it is visible, else null. " +
+                "set action=\"scroll\", target=null, and tell the user which way to move the screen; do not say " +
+                "\"bấm\". When what they need to read IS visible, use action=\"read\" with its index instead. " +
                 "\"focused\": true on an input field means the user has ALREADY tapped it and the cursor is " +
                 "in it; \"keyboard\": true means the keyboard is open. Then never tell the user to tap " +
                 "that field again: set action=\"type\", target that field, and tell them exactly what " +
@@ -371,6 +386,15 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
                 "the DESTINATION website: point at the address bar at the top (or the search box in " +
                 "the middle of a new tab), and when it is focused tell them to type the DESTINATION " +
                 "address exactly (for example vnpost.vn) and press the Go/Enter key. " +
+                "Pressable vs readable: only an element with \"clickable\": true (or role \"edit\") can be " +
+                "pressed. Elements without it (role text, heading, image) are words on the page, such as " +
+                "section titles like \"Thành phần hồ sơ\": never tell the user to bấm/chạm/nhấn/chọn them. If " +
+                "the user only needs to read, set action=\"read\", target the text to read, and say " +
+                "\"Bác đọc ...\" or \"Bác xem ...\". If a step says to scroll to a section and the screen " +
+                "already shows the content of that section (its items, rows or fields), the user is already " +
+                "there: do not ask them to scroll to it again; say they have arrived and what to read. " +
+                "Judge arrival only by that section's own title or the item labels the step names; a " +
+                "similar-looking label elsewhere on the page (\"Tên thủ tục\" is not \"Tên giấy tờ\") does not count. " +
                 "For privacy, input fields never show what the user typed: \"filled\": true means " +
                 "the field already has something in it, false means it is empty. Masked values " +
                 "(••••••, [email]) are hidden personal data: never ask the user to read them out. " +
@@ -428,7 +452,13 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
             val s = snapshot.screen
             return when (val o = TargetResolver.resolve(boxes, listOf(s.left, s.top, s.right, s.bottom), target, scrollStep, towards)) {
                 null -> GuideResult.NotSure("target=null")
-                is TargetResolver.Outcome.Tap -> GuideResult.Show(reply, o.index, Rect(snapshot.rects[o.index]), verified)
+                is TargetResolver.Outcome.Tap -> {
+                    // Headings and paragraphs are words to read, not buttons. If neither the
+                    // element nor a container around it can be pressed, never ring it as a press.
+                    val n = snapshot.nodes[o.index]
+                    val pressable = n.clickable == true || n.role == "edit"
+                    GuideResult.Show(reply, o.index, Rect(snapshot.rects[o.index]), verified, look = !pressable)
+                }
                 is TargetResolver.Outcome.Look -> GuideResult.Show(reply, o.index, Rect(snapshot.rects[o.index]), verified, look = true)
                 is TargetResolver.Outcome.Scroll -> GuideResult.Move(reply, o.towards, nudge = false, verified = verified)
                 is TargetResolver.Outcome.Nudge ->

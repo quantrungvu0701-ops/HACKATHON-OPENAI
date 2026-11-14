@@ -36,6 +36,13 @@ data class Playbook(
          * The guide stays on it until it has been shown this many times.
          */
         val repeat: Int = 1,
+        /**
+         * Words that prove the user has reached what this step points to (a section title or
+         * its item labels). While none is on screen, a "read here" answer is turned into
+         * "scroll further" with [notYet]: the model alone mistakes similar text for arrival.
+         */
+        val arrive: List<String> = emptyList(),
+        @SerialName("not_yet") val notYet: String? = null,
     )
 
     /** True when this playbook is meant for the app or website currently on screen. */

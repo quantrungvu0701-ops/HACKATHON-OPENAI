@@ -112,9 +112,16 @@ object ScreenReader {
         // Browsers hide their address bar while the page scrolls. Keep the last host read from
         // the bar for that browser until the bar is visible again.
         val read = walker.host
-        val last = lastBrowserHost
+        // Kept on disk too: after the app is killed and reopened, a page opened mid-scroll
+        // (address bar hidden) must still be recognised as the same site.
+        val last = lastBrowserHost ?: loadHost(service).also { lastBrowserHost = it }
         val host = when {
-            read != null -> read.also { lastBrowserHost = pkg to it }
+            read != null -> read.also {
+                if (last != pkg to it) {
+                    lastBrowserHost = pkg to it
+                    saveHost(service, pkg, it)
+                }
+            }
             !walker.sawUrlBar && last != null && last.first == pkg -> last.second
             else -> null
         }
@@ -124,6 +131,19 @@ object ScreenReader {
 
     /** (browser package, host) from the last read that showed the browser's address bar. */
     private var lastBrowserHost: Pair<String, String>? = null
+
+    private fun hostPrefs(c: android.content.Context) = c.getSharedPreferences("screen", android.content.Context.MODE_PRIVATE)
+
+    private fun loadHost(c: android.content.Context): Pair<String, String>? {
+        val prefs = hostPrefs(c)
+        val pkg = prefs.getString("browser_pkg", null) ?: return null
+        val host = prefs.getString("browser_host", null) ?: return null
+        return pkg to host
+    }
+
+    private fun saveHost(c: android.content.Context, pkg: String, host: String) {
+        hostPrefs(c).edit().putString("browser_pkg", pkg).putString("browser_host", host).apply()
+    }
 
     /**
      * The window the user is working in. Tapping our bubble can make the bubble's own window

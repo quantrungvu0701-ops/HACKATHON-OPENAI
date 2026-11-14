@@ -75,6 +75,7 @@ class GuideService : AccessibilityService() {
         val step: Int?,
         val total: Int?,
         val mark: String?,
+        val look: Boolean = false,
     )
 
     /** Ring plus card: progress segments, the button name marked, the caution band when needed. */
@@ -89,6 +90,7 @@ class GuideService : AccessibilityService() {
             total = c.total,
             mark = c.mark,
             cautionNote = getString(R.string.guide_caution),
+            look = c.look,
         )
     }
 
@@ -318,7 +320,7 @@ class GuideService : AccessibilityService() {
         shownRect = Rect(result.rect)
         shownPkg = snap.pkg
         shownOnWeb = snap.host != null
-        val c = Card(title, body, footer, reply.caution, step, total, node.text ?: node.desc)
+        val c = Card(title, body, footer, reply.caution, step, total, node.text ?: node.desc, look = result.look)
         card = c
         uiSeq++
         showCard(result.rect, c, body)
