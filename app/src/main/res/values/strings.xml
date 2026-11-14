@@ -5,19 +5,19 @@
     <!-- Accessibility service -->
     <string name="service_label">Chỉ Đây</string>
     <string name="service_summary">Khoanh tròn nút cần bấm và đọc hướng dẫn bằng tiếng Việt.</string>
-    <string name="service_description">Chỉ Đây đọc nội dung màn hình khi bác bấm vào nút tròn màu cam, rồi khoanh tròn nút cần bấm và nói cho bác biết phải làm gì. Chỉ Đây không bao giờ bấm, gõ hay gửi thay bác.</string>
+    <string name="service_description">Chỉ Đây đọc nội dung màn hình khi bác bấm vào nút tròn có vòng vàng, rồi khoanh tròn nút cần bấm và nói cho bác biết phải làm gì. Chỉ Đây không bao giờ bấm, gõ hay gửi thay bác.</string>
     <string name="bubble_description">Nút Chỉ Đây. Bấm để được chỉ dẫn.</string>
 
     <!-- Home -->
-    <string name="home_tagline">Bấm nút cam khi bác không biết bấm vào đâu.</string>
+    <string name="home_tagline">Bấm nút tròn vòng vàng khi bác không biết bấm vào đâu.</string>
     <string name="home_checklist_title">Kiểm tra trước khi dùng</string>
     <string name="check_service_title">Quyền trợ năng</string>
-    <string name="check_service_ok">Đã bật. Nút cam đang nổi trên màn hình.</string>
+    <string name="check_service_ok">Đã bật. Nút tròn vòng vàng đang nổi trên màn hình.</string>
     <string name="check_service_starting">Đã bật trong Cài đặt nhưng chưa chạy. Bấm để mở Cài đặt, tắt rồi bật lại.</string>
     <string name="check_service_off">Chưa bật. Bấm để mở Cài đặt trợ năng.</string>
     <string name="home_open_accessibility">Mở Cài đặt trợ năng</string>
     <string name="home_start">Bắt đầu</string>
-    <string name="home_start_hint">Mở ứng dụng bác cần làm, rồi bấm nút cam.</string>
+    <string name="home_start_hint">Mở ứng dụng bác cần làm. Khi bí, bấm nút tròn vòng vàng nổi trên màn hình.</string>
     <string name="home_not_ready">Bác cần bật quyền trợ năng trước.</string>
     <string name="restricted_title">Nếu công tắc bị mờ, không bật được</string>
     <string name="restricted_step_1">1. Bấm «Mở thông tin ứng dụng» bên dưới.</string>
@@ -37,7 +37,28 @@
     <string name="check_voice_checking">Đang kiểm tra giọng đọc…</string>
     <string name="check_voice_missing">Chưa có giọng tiếng Việt. Chỉ Đây vẫn hiện chữ. Bấm để cài giọng đọc.</string>
     <string name="home_build">Bản dựng %1$s</string>
-    <string name="home_goal_label">Bác muốn làm việc gì?</string>
+    <string name="home_goal_label">Bác cần làm việc gì?</string>
+    <string name="home_goal_placeholder">Bấm micro rồi nói, hoặc gõ vào đây</string>
+    <string name="home_ready">Sẵn sàng</string>
+    <string name="home_ready_details">Xem chi tiết</string>
+    <string name="home_ready_hide">Thu gọn</string>
+    <string name="home_goal_clear">Xóa chữ</string>
+    <string name="match_found_title">Có hướng dẫn sẵn cho việc này</string>
+    <string name="match_found_body">%1$s, %2$d bước, trên %3$s.</string>
+    <string name="match_found_checked">Nhóm đã thử trên điện thoại ngày %1$s.</string>
+    <string name="match_none">Chưa có hướng dẫn sẵn cho việc này. Chỉ Đây vẫn chỉ từng bước, kèm nhãn «chưa kiểm chứng».</string>
+
+    <!-- Voice goal -->
+    <string name="voice_start">Bấm để nói việc bác cần làm</string>
+    <string name="voice_stop">Bấm để dừng nghe</string>
+    <string name="voice_listening">Đang nghe… bác cứ nói</string>
+    <string name="voice_listening_hint">Nói xong thì bấm micro lần nữa, hoặc chờ một chút.</string>
+    <string name="voice_prompt">Bác cần làm việc gì?</string>
+    <string name="voice_no_match">Chưa nghe rõ. Bác bấm micro và nói lại, chậm một chút.</string>
+    <string name="voice_network">Nghe giọng cần có mạng. Bác kiểm tra Wi‑Fi rồi thử lại, hoặc gõ vào ô.</string>
+    <string name="voice_no_permission">Chỉ Đây cần quyền dùng micro để nghe bác nói. Bác có thể gõ vào ô thay vì nói.</string>
+    <string name="voice_unavailable">Máy này chưa nghe được giọng nói. Bác gõ vào ô nhé.</string>
+    <string name="voice_failed">Micro chưa chạy được. Bác thử lại, hoặc gõ vào ô.</string>
     <string name="home_goal_known">Việc đã có hướng dẫn từng bước:</string>
     <string name="home_goal_hint">Ví dụ: tra cứu hồ sơ, nộp tiền điện</string>
 
@@ -47,7 +68,7 @@
     <string name="guide_no_key">Chưa có khóa AI</string>
     <string name="guide_no_key_body">Bác mở ứng dụng Chỉ Đây và nhập khóa trong Cài đặt.</string>
     <string name="guide_failed">Chưa kết nối được với AI</string>
-    <string name="guide_failed_body">Bác kiểm tra mạng rồi bấm nút cam lần nữa.</string>
+    <string name="guide_failed_body">Bác kiểm tra mạng rồi bấm nút tròn lần nữa.</string>
     <string name="guide_step">Bước %1$d/%2$d</string>
     <string name="guide_unverified">chưa kiểm chứng</string>
     <string name="guide_caution">Bác kiểm tra kỹ thông tin trước khi bấm.</string>

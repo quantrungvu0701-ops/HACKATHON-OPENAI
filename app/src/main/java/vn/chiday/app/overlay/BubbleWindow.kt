@@ -144,18 +144,26 @@ class BubbleWindow(
         prefs.edit().putInt("x", lp.x).putInt("y", lp.y).apply()
     }
 
-    /** Orange disc with a white ring and dot. Ring spins while the model is thinking. */
+    /**
+     * Ink disc with a highlighter-yellow ring and dot (same mark as the app icon). Ring spins
+     * while the model is thinking. During a guided session the disc turns yellow with an ink ring,
+     * so the user can see at a glance that Chỉ Đây is following along.
+     */
     private class BubbleView(context: Context) : View(context) {
         private val d = resources.displayMetrics.density
         private val disc = Paint(Paint.ANTI_ALIAS_FLAG)
         private val shadow = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x33000000 }
+        private val edge = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 2.5f * d
+            color = WHITE
+        }
         private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
-            strokeWidth = 3.5f * d
+            strokeWidth = 4f * d
             strokeCap = Paint.Cap.ROUND
-            color = 0xFFFFFFFF.toInt()
         }
-        private val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() }
+        private val dot = Paint(Paint.ANTI_ALIAS_FLAG)
         private val arc = RectF()
 
         var state: State = State.IDLE
@@ -175,13 +183,18 @@ class BubbleWindow(
             val cx = width / 2f
             val cy = height / 2f
             val r = width / 2f - 4 * d
+            val active = state == State.ACTIVE
             disc.color = when {
-                pressedDown -> 0xFFA6360B.toInt()
-                state == State.ACTIVE -> 0xFF2B8A3E.toInt()
-                else -> 0xFFD9480F.toInt()
+                pressedDown -> INK_PRESSED
+                active -> YELLOW
+                else -> INK
             }
+            ring.color = if (active) INK else YELLOW
+            dot.color = if (active) INK else YELLOW
             canvas.drawCircle(cx, cy + 1.5f * d, r + 1.5f * d, shadow)
             canvas.drawCircle(cx, cy, r, disc)
+            // White edge keeps the ink disc visible on dark apps and the yellow one on light apps.
+            canvas.drawCircle(cx, cy, r - edge.strokeWidth / 2f, edge)
 
             val rr = r * 0.52f
             if (state == State.THINKING) {
@@ -193,6 +206,13 @@ class BubbleWindow(
                 canvas.drawCircle(cx, cy, rr, ring)
             }
             canvas.drawCircle(cx, cy, r * 0.2f, dot)
+        }
+
+        private companion object {
+            const val INK = 0xFF16223B.toInt()
+            const val INK_PRESSED = 0xFF2A3A5E.toInt()
+            const val YELLOW = 0xFFFFD43B.toInt()
+            const val WHITE = 0xFFFFFFFF.toInt()
         }
     }
 }

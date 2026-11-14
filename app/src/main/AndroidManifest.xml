@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Only to hear the user say their goal on Home. Asked the first time they tap the mic. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- Lets us ask the system which TTS engines exist (Android 11+ package visibility). -->
     <queries>
@@ -11,6 +13,13 @@
         <!-- So the camera app can be launched for a document photo. -->
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <!-- So SpeechRecognizer can find the phone's speech engine (voice goal on Home). -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
         </intent>
     </queries>
 
