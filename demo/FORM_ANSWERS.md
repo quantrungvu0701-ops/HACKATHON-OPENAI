@@ -71,4 +71,4 @@ Bài học: AI chọn đúng nút là chưa đủ — phải kiểm tra bằng h
 **Link sản phẩm hoặc mã nguồn:** https://github.com/quantrungvu0701-ops/HACKATHON-OPENAI
 > ⚠️ Repo đang để private: phải chuyển public (hoặc thêm BGK làm collaborator) trước khi nộp, nếu không BGK không mở được.
 
-**Link video dự phòng:** `<link Google Drive của demo/chiday_demo.mp4, chế độ "Bất kỳ ai có link">`
+**Link video dự phòng:** https://drive.google.com/file/d/1Cuz-Nsmhktm3BqQyiZwvB3YE0PTupsJk/view?usp=drivesdk

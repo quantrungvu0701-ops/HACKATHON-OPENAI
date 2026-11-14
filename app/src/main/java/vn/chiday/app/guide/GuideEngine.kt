@@ -176,7 +176,11 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
             kotlinx.coroutines.withTimeoutOrNull(CALL_TIMEOUT_MS) { client.complete(SYSTEM_PROMPT, message) }
                 ?: run {
                     Log.w(TAG, "model call took over ${CALL_TIMEOUT_MS / 1000}s: trying once more on a fresh connection")
-                    Llm.http.connectionPool.evictAll()
+                    // Closing pooled TLS sockets is network I/O: never on the main thread
+                    // (NetworkOnMainThreadException killed the retry after a Wi-Fi blip).
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        runCatching { Llm.http.connectionPool.evictAll() }
+                    }
                     kotlinx.coroutines.withTimeoutOrNull(CALL_TIMEOUT_MS) { client.complete(SYSTEM_PROMPT, message) }
                 }
                 ?: return GuideResult.Failed("model call timed out twice")
