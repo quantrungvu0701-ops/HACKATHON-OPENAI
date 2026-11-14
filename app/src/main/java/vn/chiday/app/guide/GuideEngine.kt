@@ -12,6 +12,7 @@ import vn.chiday.app.llm.LlmException
 import vn.chiday.app.playbook.Playbook
 import vn.chiday.app.playbook.PlaybookStore
 import vn.chiday.app.screen.ScreenSnapshot
+import vn.chiday.app.screen.UiNode
 import vn.chiday.app.settings.SettingsStore
 
 /** The model's answer. Schema from MECHANISM.md §2.3. Everything is optional: output is untrusted. */
@@ -33,7 +34,27 @@ sealed interface GuideResult {
      * A validated instruction: [rect] comes from the accessibility tree, never from the model.
      * [verified] is true when a verified playbook backed this step; false is generic mode.
      */
-    data class Show(val reply: GuideReply, val targetIndex: Int, val rect: Rect, val verified: Boolean = false) : GuideResult
+    data class Show(
+        val reply: GuideReply,
+        val targetIndex: Int,
+        val rect: Rect,
+        val verified: Boolean = false,
+        /** Ring it, but the user only looks or reads here: the overlay must not say "bấm". */
+        val look: Boolean = false,
+    ) : GuideResult
+
+    /**
+     * Nothing is ringed: the user has to move the screen first. [nudge] false means what they
+     * need is off screen (follow [reply]'s instruction); true means the target is on screen at
+     * [anchor] but cut off or hidden under a floating button, so a small scroll is enough.
+     */
+    data class Move(
+        val reply: GuideReply,
+        val towards: TargetResolver.Towards,
+        val nudge: Boolean,
+        val anchor: Rect? = null,
+        val verified: Boolean = false,
+    ) : GuideResult
 
     /** The model could not tell, pointed at a node that does not exist, or was not confident. */
     data class NotSure(val why: String) : GuideResult
@@ -60,10 +81,28 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
     /** Number of the playbook step shown last, to tell apart steps that share a screen. */
     private var lastStepN: Int? = null
 
+    /** The last instruction with a target, kept so [recheck] can re-place it without the model. */
+    private class Pending(val reply: GuideReply, val node: UiNode, val scrollStep: Boolean, val towards: TargetResolver.Towards, val verified: Boolean)
+
+    private var pending: Pending? = null
+
     fun resetSession() {
         lastStep = null
         lastStepN = null
         sessionPlaybook = null
+        pending = null
+    }
+
+    /**
+     * Runs the geometry check again for the last target on a new read of the screen, with no
+     * model call. Used after the user scrolled in answer to a "move the screen" instruction:
+     * the target may now be fully visible. Null when there is no such target or it is gone.
+     */
+    fun recheck(snapshot: ScreenSnapshot): GuideResult? {
+        val p = pending ?: return null
+        val index = snapshot.nodes.indexOfFirst { sameElement(it, p.node) }
+        if (index < 0) return null
+        return place(p.reply.copy(target = index), snapshot, p.scrollStep, p.towards, p.verified)
     }
 
     suspend fun decide(snapshot: ScreenSnapshot): GuideResult {
@@ -97,14 +136,27 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
                 caution = reply.caution || step?.caution == true,
             )
         }
-        return when (val result = validate(reply, snapshot)) {
-            is GuideResult.Show -> {
-                lastStep = reply.subtitle ?: reply.say
-                if (playbook != null) lastStepN = reply.step ?: lastStepN
-                result.copy(verified = playbook?.verified != null)
-            }
-            else -> result
+        val step = playbook?.steps?.firstOrNull { it.n == reply.step }
+        val scrollStep = reply.action?.trim()?.lowercase() == "scroll" || TargetResolver.isScrollStep(step?.action)
+        val towards = TargetResolver.scrollTowards(step?.action ?: reply.subtitle ?: reply.say)
+        val result = place(reply, snapshot, scrollStep, towards, verified = playbook?.verified != null)
+        if (result is GuideResult.Show || result is GuideResult.Move) {
+            lastStep = reply.subtitle ?: reply.say
+            if (playbook != null) lastStepN = reply.step ?: lastStepN
         }
+        return result
+    }
+
+    /** Geometry check on a validated reply, and memory of the target for [recheck]. */
+    private fun place(reply: GuideReply, snapshot: ScreenSnapshot, scrollStep: Boolean, towards: TargetResolver.Towards, verified: Boolean): GuideResult {
+        val result = validate(reply, snapshot, scrollStep, towards, verified)
+        val index = when (result) {
+            is GuideResult.Show -> result.targetIndex
+            is GuideResult.Move -> result.reply.target?.takeIf { result.nudge && it in snapshot.nodes.indices }
+            else -> null
+        }
+        pending = index?.let { Pending(reply, snapshot.nodes[it], scrollStep, towards, verified) }
+        return result
     }
 
     private fun userMessage(snapshot: ScreenSnapshot, playbook: Playbook?, likely: Playbook.Step?): String = buildString {
@@ -137,6 +189,9 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
                 "text matching), set \"step\" to that step's \"n\", point at the element that step " +
                 "describes, and mention the step's pitfall if it has one. If the screen fits no step " +
                 "of the playbook, guide from the goal alone. " +
+                "If what the user needs is not on screen yet, or the step is only to scroll or read, " +
+                "set action=\"scroll\", tell the user which way to move the screen, do not say " +
+                "\"bấm\", and set target to the element to read if it is visible, else null. " +
                 "Reply with JSON only: {service, step, total_steps, target, action, say, subtitle, " +
                 "caution, confidence}"
 
@@ -159,13 +214,40 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
         }
 
         /** The guardrails from MECHANISM.md §2.3. A target is shown only if its index really exists. */
-        fun validate(reply: GuideReply, snapshot: ScreenSnapshot): GuideResult {
-            val target = reply.target ?: return GuideResult.NotSure("target=null")
-            if (target !in snapshot.nodes.indices) return GuideResult.NotSure("unknown index $target of ${snapshot.nodes.size}")
+        fun validate(
+            reply: GuideReply,
+            snapshot: ScreenSnapshot,
+            scrollStep: Boolean = false,
+            towards: TargetResolver.Towards = TargetResolver.Towards.BELOW,
+            verified: Boolean = false,
+        ): GuideResult {
+            val target = reply.target
+            if (target == null && !scrollStep) return GuideResult.NotSure("target=null")
+            if (target != null && target !in snapshot.nodes.indices) {
+                return GuideResult.NotSure("unknown index $target of ${snapshot.nodes.size}")
+            }
             val confidence = reply.confidence
             if (confidence != null && confidence < MIN_CONFIDENCE) return GuideResult.NotSure("confidence $confidence")
             if (reply.say.isNullOrBlank() && reply.subtitle.isNullOrBlank()) return GuideResult.NotSure("no instruction text")
-            return GuideResult.Show(reply, target, Rect(snapshot.rects[target]))
+
+            // The model chose; geometry decides whether a finger can land there (TargetResolver).
+            val boxes = snapshot.nodes.mapIndexed { i, n ->
+                val r = snapshot.fullRects[i]
+                TargetResolver.Node(listOf(r.left, r.top, r.right, r.bottom), n.clickable == true)
+            }
+            val s = snapshot.screen
+            return when (val o = TargetResolver.resolve(boxes, listOf(s.left, s.top, s.right, s.bottom), target, scrollStep, towards)) {
+                null -> GuideResult.NotSure("target=null")
+                is TargetResolver.Outcome.Tap -> GuideResult.Show(reply, o.index, Rect(snapshot.rects[o.index]), verified)
+                is TargetResolver.Outcome.Look -> GuideResult.Show(reply, o.index, Rect(snapshot.rects[o.index]), verified, look = true)
+                is TargetResolver.Outcome.Scroll -> GuideResult.Move(reply, o.towards, nudge = false, verified = verified)
+                is TargetResolver.Outcome.Nudge ->
+                    GuideResult.Move(reply.copy(target = o.index), o.towards, nudge = true, anchor = Rect(snapshot.rects[o.index]), verified = verified)
+            }
         }
+
+        /** Same element across two reads of the screen: same role and labels. */
+        fun sameElement(a: UiNode, b: UiNode) =
+            a.role == b.role && a.text == b.text && a.desc == b.desc && a.id == b.id && a.hint == b.hint
     }
 }
