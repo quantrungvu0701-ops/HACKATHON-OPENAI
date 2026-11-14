@@ -192,6 +192,9 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
                 "If what the user needs is not on screen yet, or the step is only to scroll or read, " +
                 "set action=\"scroll\", tell the user which way to move the screen, do not say " +
                 "\"bấm\", and set target to the element to read if it is visible, else null. " +
+                "For privacy, input fields never show what the user typed: \"filled\": true means " +
+                "the field already has something in it, false means it is empty. Masked values " +
+                "(••••••, [email]) are hidden personal data: never ask the user to read them out. " +
                 "Reply with JSON only: {service, step, total_steps, target, action, say, subtitle, " +
                 "caution, confidence}"
 
@@ -249,6 +252,8 @@ class GuideEngine(private val settings: SettingsStore, private val playbooks: Pl
 
         /** Same element across two reads of the screen: same role and labels. */
         fun sameElement(a: UiNode, b: UiNode) =
-            a.role == b.role && a.text == b.text && a.desc == b.desc && a.id == b.id && a.hint == b.hint
+            // "filled" counts: typed text is never read (privacy), so a field the user has just
+            // typed into differs from the empty one only by this flag, which moves the guide on.
+            a.role == b.role && a.text == b.text && a.desc == b.desc && a.id == b.id && a.hint == b.hint && a.filled == b.filled
     }
 }

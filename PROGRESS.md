@@ -344,3 +344,4 @@ Order of work when the phone and the host's key arrive:
   is a generated mock card, so the demo needs a photo of a real card (numbers covered).
   Gotcha: `adb shell uiautomator dump` hung the accessibility service again; toggling
   `enabled_accessibility_services` brought the bubble back.
+- feat/privacy-filter (not merged): input fields send only filled/empty, never typed text; password/PIN/OTP/card fields fully hidden; phone/ID/account numbers (also spaced) and e-mails masked; PrivacyFilter.captureRedacted blacks out input fields in memory before any screenshot is encoded (no caller yet, untested on device); DocCheck camera photo deleted from cache after use. tools/privacy_filter_test.sh PASS on emulator.

@@ -75,6 +75,11 @@ private sealed interface DocState {
     data class Failed(val reason: String) : DocState
 }
 
+/** Deletes the camera's full-size photo from our cache. Safe to call when there is none. */
+private fun deleteCameraPhoto(context: android.content.Context) {
+    File(context.cacheDir, "doccheck").deleteRecursively()
+}
+
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun DocCheckScreen(onBack: () -> Unit) {
@@ -82,7 +87,11 @@ fun DocCheckScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val store = remember { SettingsStore(context) }
     val speaker = remember { Speaker(context) }
-    DisposableEffect(Unit) { onDispose { speaker.shutdown() } }
+    DisposableEffect(Unit) {
+        // A photo left behind by a crash or a cancelled check is removed on entry and exit.
+        deleteCameraPhoto(context)
+        onDispose { speaker.shutdown(); deleteCameraPhoto(context) }
+    }
 
     val kinds = listOf(
         stringResource(R.string.doc_kind_id),
@@ -108,6 +117,9 @@ fun DocCheckScreen(onBack: () -> Unit) {
                     DocState.Failed(noKey)
                 } else {
                     val prepared = DocChecker.prepare(context, uri)
+                    // Privacy: the full-size camera photo of an ID card must not stay on the
+                    // phone. Only the scaled copy in memory is kept, for this screen only.
+                    deleteCameraPhoto(context)
                     photo = prepared
                     val started = android.os.SystemClock.elapsedRealtime()
                     val verdict = DocChecker.check(settings, prepared, kinds[kind])
@@ -129,7 +141,7 @@ fun DocCheckScreen(onBack: () -> Unit) {
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) run(uri) }
     val takePicture = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
         val uri = cameraUri
-        if (saved && uri != null) run(uri)
+        if (saved && uri != null) run(uri) else deleteCameraPhoto(context)
     }
 
     val working = state == DocState.Working
