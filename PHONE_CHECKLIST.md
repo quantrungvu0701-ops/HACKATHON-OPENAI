@@ -3,7 +3,7 @@
 Run every item top to bottom **before any new feature work**. Anything that behaves
 differently from the emulator gets fixed first. The emulator is never the demo.
 
-> **Phone: `__________ (brand)  __________ (model)  Android ____`**
+> **Phone: Samsung Galaxy A56 (SM-A566B), Android 16, One UI, English system language**
 > The brand, model and Android version were not given when this file was written, so the
 > brand-specific items list every common Vietnamese-market brand. Fill the line above,
 > then follow only your brand's row in items 3 and 6.
