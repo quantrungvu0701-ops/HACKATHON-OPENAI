@@ -1,0 +1,449 @@
+<title>Chỉ Đây UI Preview</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: one phone at real dp size (1 CSS px = 1 dp) beside a control panel; stacks on narrow screens. */
+:root{
+  /* page chrome */
+  --bg:#eef0f4; --fg:#16223b; --muted:#56627a; --rule:#d5dbe5; --panel:#ffffff; --field:#f5f7fa;
+  /* app palette, copied from ui/Theme.kt and HighlightWindow */
+  --ink:#16223b; --ink-2:#2a3a5e; --soft:#5d6880; --paper:#f7f8fa; --card:#ffffff; --line:#dde2ea;
+  --hl:#ffd43b; --stamp:#c8102e; --stamp-bg:#fdecee; --caution:#ff8a8a; --ok:#2f7d4f; --ok-bg:#e8f3ec;
+  --dim:rgba(13,19,34,.55);
+  --f:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f141d;--fg:#e6eaf2;--muted:#9aa5b8;--rule:#283244;--panel:#161d2a;--field:#1d2535;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f141d;--fg:#e6eaf2;--muted:#9aa5b8;--rule:#283244;--panel:#161d2a;--field:#1d2535;color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:22px}
+header{display:grid;gap:6px;max-width:72ch}
+h1{margin:0;font-size:clamp(24px,3.4vw,34px);line-height:1.15;font-weight:800;letter-spacing:-.015em;text-wrap:balance}
+header p{margin:0;color:var(--muted)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{font:inherit;font-weight:700;border:2px solid var(--rule);background:var(--panel);color:var(--fg);border-radius:999px;padding:8px 16px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+:root[data-theme="dark"] .tabs button[aria-pressed="true"]{background:var(--hl);border-color:var(--hl);color:#16223b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .tabs button[aria-pressed="true"]{background:var(--hl);border-color:var(--hl);color:#16223b}}
+.stage{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.panel{flex:1 1 320px;min-width:0;background:var(--panel);border:1px solid var(--rule);border-radius:16px;padding:18px;display:grid;gap:14px}
+.panel h2{margin:0;font-size:17px}
+.panel p.note{margin:0;color:var(--muted);font-size:13.5px}
+.ctl{display:grid;gap:5px}
+.ctl label,.lab{font-size:12.5px;font-weight:700;color:var(--muted);letter-spacing:.02em}
+.ctl input[type=text],.ctl textarea,.ctl select,.ctl input[type=number]{font:inherit;font-size:14px;width:100%;padding:8px 10px;border:1px solid var(--rule);border-radius:10px;background:var(--field);color:var(--fg)}
+.ctl textarea{resize:vertical;min-height:56px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{font:inherit;font-size:13px;font-weight:600;border:1px solid var(--rule);background:var(--field);color:var(--fg);border-radius:9px;padding:6px 10px;cursor:pointer}
+.chips button[aria-pressed="true"]{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.check{display:flex;gap:8px;align-items:center;font-size:14px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--hl);outline-offset:2px}
+
+/* ---------- phone: 360 x 760 dp ---------- */
+.phone{flex:0 0 auto;width:376px;max-width:100%;border-radius:40px;background:#0d1322;padding:8px;box-shadow:0 20px 44px -22px rgba(13,19,34,.6)}
+.scr{position:relative;width:360px;max-width:100%;height:760px;border-radius:32px;overflow:hidden;background:var(--paper);color:var(--ink);font-family:var(--f)}
+.sb{position:absolute;inset:0 0 auto;height:28px;display:flex;justify-content:space-between;align-items:center;padding:0 20px;font-size:12px;font-weight:700;color:var(--ink);z-index:5}
+.sb.light{color:#fff}
+.view{position:absolute;inset:0;padding-top:28px;overflow-y:auto}
+.view[hidden]{display:none}
+
+/* Home */
+.home{padding:8px 20px 20px;display:flex;flex-direction:column;gap:14px;min-height:100%}
+.ready{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;color:var(--ok)}
+.ready i{width:24px;height:24px;border-radius:50%;background:var(--ok);display:grid;place-items:center;flex:0 0 auto}
+.ready i::after{content:"";width:9px;height:5px;border:2.5px solid #fff;border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+.ready span.more{margin-left:auto;color:var(--soft);font-weight:500;font-size:15px;text-decoration:underline;text-underline-offset:3px}
+.q{font-size:32px;line-height:38px;font-weight:800;margin:4px 0 0;color:var(--ink);letter-spacing:-.01em}
+.field{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:10px 10px 10px 14px;display:flex;gap:10px;align-items:center;min-height:80px}
+.field:focus-within{border-color:var(--ink)}
+.field textarea{flex:1;border:0;outline:0;resize:none;font:inherit;font-size:18px;line-height:24px;color:var(--ink);background:transparent;min-width:0;height:52px}
+.field textarea::placeholder{color:var(--soft)}
+.mic{flex:0 0 auto;width:56px;height:56px;border-radius:50%;background:var(--ink);display:grid;place-items:center;border:0;cursor:pointer;transition:box-shadow .2s}
+.mic::before{content:"";width:12px;height:21px;border-radius:7px;background:var(--hl)}
+.mic.on{box-shadow:0 0 0 8px rgba(255,212,59,.55)}
+.match{display:flex;background:var(--card);border-radius:14px;overflow:hidden}
+.match .bar{flex:0 0 6px;background:var(--hl)}
+.match.none .bar{background:var(--line)}
+.match div.t{padding:12px 14px;display:grid;gap:2px}
+.match b{font-size:19px;line-height:25px;font-weight:600}
+.match small{font-size:16px;line-height:23px;color:var(--soft)}
+.known{display:grid}
+.known .lab2{font-size:16px;font-weight:600;color:var(--soft);margin-bottom:4px}
+.known button{all:unset;cursor:pointer;display:flex;align-items:center;min-height:56px;border-bottom:1px solid var(--line);font-size:18px;font-weight:600;color:var(--ink);gap:10px}
+.known button:first-of-type{border-top:1px solid var(--line)}
+.known button::after{content:"";margin-left:auto;width:9px;height:9px;border:2px solid var(--soft);border-left:0;border-bottom:0;transform:rotate(45deg)}
+.known button:focus-visible{outline:3px solid var(--hl)}
+.start{all:unset;cursor:pointer;background:var(--ink);color:#fff;border-radius:20px;min-height:68px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:22px;font-weight:800}
+.start:focus-visible{outline:3px solid var(--hl);outline-offset:3px}
+.mini{width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 5px #fff,inset 0 0 0 9px var(--hl)}
+.hint{font-size:16px;line-height:23px;color:var(--soft);text-align:center;margin:0}
+.sec{all:unset;cursor:pointer;border:2px solid var(--line);border-radius:16px;min-height:56px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:var(--ink)}
+
+/* fake web page under the overlay */
+.web{position:absolute;inset:28px 0 0;background:#fff;color:#333;font-size:14px;display:flex;flex-direction:column}
+.web.dark{background:#1b1f27;color:#d7dbe3}
+.addr{margin:6px 12px 8px;background:#eef0f3;border-radius:999px;padding:8px 14px;font-size:13px;color:#555}
+.web.dark .addr{background:#2a303b;color:#aab}
+.whead{background:#a3151b;color:#fff;padding:12px 14px;font-weight:700}
+.wrow{padding:14px;border-bottom:1px solid #eee;line-height:1.4;min-height:76px;cursor:pointer}
+.web.dark .wrow{border-color:#2d3340}
+.wrow b{color:#1a4f9c;font-weight:600}
+.web.dark .wrow b{color:#8fb3ff}
+.wrow small{display:block;color:#888;font-size:12px}
+.wsec{padding:12px 14px;line-height:1.45}
+.wsec h4{margin:0 0 4px;font-size:15px}
+.wbtn{margin:14px;background:#1a4f9c;color:#fff;border-radius:6px;text-align:center;padding:14px;font-weight:700;cursor:pointer}
+
+/* the overlay itself (pointer-events:none = FLAG_NOT_TOUCHABLE) */
+.ov{position:absolute;inset:0;pointer-events:none;z-index:4}
+.ov svg{position:absolute;inset:0;width:100%;height:100%}
+.card{position:absolute;left:16px;right:16px;background:#fff;border:3px solid var(--ink);border-radius:22px;padding:16px 20px;display:grid;gap:6px;color:var(--ink)}
+.card.caution{border-color:var(--stamp)}
+.band{background:var(--stamp-bg);color:var(--stamp);border-radius:12px;padding:10px;font-size:16px;line-height:1.12;font-weight:700;margin-bottom:6px}
+.foot{font-size:15px;font-weight:700;color:var(--soft);line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.segs{display:flex;gap:5px;height:6px;margin:6px 0}
+.segs i{flex:1;border-radius:3px;background:var(--line)}
+.segs i.on{background:var(--ink)}
+.card.caution .segs i.on{background:var(--stamp)}
+.ttl{font-size:24px;line-height:1.12;font-weight:700;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ttl mark{background:var(--hl);color:inherit}
+.bdy{font-size:19px;line-height:1.12;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.bubble{position:absolute;right:10px;top:46%;width:60px;height:60px;border-radius:50%;background:var(--ink);box-shadow:inset 0 0 0 6px var(--ink),inset 0 0 0 11px var(--hl),0 4px 12px rgba(0,0,0,.3);z-index:6}
+.bubble.active{background:var(--hl);box-shadow:inset 0 0 0 6px var(--hl),inset 0 0 0 11px var(--ink),0 4px 12px rgba(0,0,0,.3)}
+.toast{position:absolute;left:50%;top:40px;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:13px;padding:6px 12px;border-radius:999px;z-index:7;opacity:0;transition:opacity .25s;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* DocCheck */
+.doc{padding:8px 20px 24px;display:flex;flex-direction:column;gap:14px}
+.back{all:unset;cursor:pointer;color:var(--ink-2);font-size:19px;font-weight:600;padding:6px 0}
+.doc h3{margin:0;font-size:32px;line-height:38px;font-weight:800}
+.doc .intro{margin:0;font-size:18px;line-height:26px;color:var(--soft)}
+.doc .lab3{font-size:16px;font-weight:600;color:var(--soft)}
+.kinds{display:flex;gap:8px}
+.kinds button{all:unset;cursor:pointer;flex:1;min-height:56px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:16px;font-weight:600;line-height:1.2;padding:0 4px}
+.kinds button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.photo{width:100%;max-height:260px;object-fit:contain;border-radius:16px;border:2px solid var(--line);background:#e9edf2}
+.photo.ok{border-color:var(--ok)} .photo.bad{border-color:var(--stamp)}
+.sample{height:180px;border-radius:16px;border:2px solid var(--line);background:linear-gradient(135deg,#cfe0f5,#e9f0f8);display:grid;place-items:center;color:#4a5f80;font-weight:700;font-size:15px;position:relative;overflow:hidden}
+.sample.blur span{filter:blur(3px)}
+.sample.ok{border-color:var(--ok)} .sample.bad{border-color:var(--stamp)}
+.working{display:flex;gap:12px;align-items:center;font-size:19px;font-weight:600}
+.spin{width:24px;height:24px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--ink);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.vcard{display:flex;background:var(--card);border-radius:14px;overflow:hidden}
+.vcard .bar{flex:0 0 6px}
+.vcard .t{padding:14px 16px;display:grid;gap:6px}
+.vcard h5{margin:0;font-size:22px;line-height:28px}
+.vcard p{margin:0;font-size:18px;line-height:26px}
+.vcard small{font-size:16px;color:var(--soft)}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+@media (max-width:420px){.phone{padding:0;border-radius:0;background:none;box-shadow:none;width:100%}.scr{width:100%;border-radius:20px}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Xem thử giao diện Chỉ Đây</h1>
+    <p>Bản HTML mô phỏng ba màn đang có trong code (Home, thẻ hướng dẫn trên overlay, Kiểm tra ảnh giấy tờ), đúng màu, cỡ chữ và quy tắc vẽ của app. Không gọi AI: chữ hướng dẫn và kết quả là mẫu, bác sửa được ở bảng bên phải. Không dùng bản này để demo.</p>
+  </header>
+
+  <div class="tabs" role="group" aria-label="Màn hình">
+    <button type="button" data-tab="home" aria-pressed="true">1. Home</button>
+    <button type="button" data-tab="guide" aria-pressed="false">2. Overlay hướng dẫn</button>
+    <button type="button" data-tab="doc" aria-pressed="false">3. Kiểm tra ảnh</button>
+  </div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="scr" id="scr">
+        <div class="sb" id="sb"><span>9:41</span><span>5G ▮▮▮</span></div>
+
+        <!-- HOME -->
+        <section class="view" id="v-home">
+          <div class="home">
+            <div class="ready"><i></i>Sẵn sàng<span class="more">Xem chi tiết</span></div>
+            <p class="q">Bác cần làm việc gì?</p>
+            <div class="field">
+              <textarea id="goal" aria-label="Việc cần làm" placeholder="Bấm micro rồi nói, hoặc gõ vào đây"></textarea>
+              <button type="button" class="mic" id="mic" aria-label="Nói"></button>
+            </div>
+            <div id="matchSlot"></div>
+            <div class="known" id="known"></div>
+            <div style="flex:1"></div>
+            <button type="button" class="start" id="startBtn"><span class="mini"></span>Bắt đầu</button>
+            <p class="hint">Mở ứng dụng bác cần làm. Khi bí, bấm nút tròn vòng vàng nổi trên màn hình.</p>
+            <button type="button" class="sec" data-go="doc">Kiểm tra ảnh giấy tờ</button>
+          </div>
+        </section>
+
+        <!-- GUIDE -->
+        <section class="view" id="v-guide" hidden>
+          <div class="web" id="web"></div>
+          <div class="ov" id="ov">
+            <svg id="ovsvg" aria-hidden="true"></svg>
+            <div class="card" id="card"></div>
+          </div>
+          <div class="bubble" id="bubble"></div>
+          <div class="toast" id="toast">Bác đã bấm xuyên qua lớp phủ</div>
+        </section>
+
+        <!-- DOC -->
+        <section class="view" id="v-doc" hidden>
+          <div class="doc" id="doc"></div>
+        </section>
+      </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="panel" id="p-home">
+      <h2>Home</h2>
+      <p class="note">Gõ hoặc bấm micro (điền câu mẫu). Thẻ khớp hướng dẫn dùng đúng luật của <code>PlaybookStore.matchGoal</code>: ít nhất 2 từ nội dung trùng và phủ 40% câu mục tiêu.</p>
+      <div class="ctl"><span class="lab">Câu mẫu</span>
+        <div class="chips" id="goalSamples"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="p-guide" hidden>
+      <h2>Thẻ hướng dẫn</h2>
+      <p class="note">Bấm vào chỗ được khoanh trên trang để thấy ngón tay đi xuyên lớp phủ và app sang bước kế.</p>
+      <div class="ctl"><span class="lab">Tình huống</span><div class="chips" id="presets"></div></div>
+      <div class="ctl"><label for="fTitle">Câu ngắn (subtitle)</label><textarea id="fTitle"></textarea></div>
+      <div class="ctl"><label for="fBody">Câu đọc to (say)</label><textarea id="fBody"></textarea></div>
+      <div class="ctl"><label for="fMark">Nhãn của nút được khoanh (node text)</label><input type="text" id="fMark"></div>
+      <div class="row2">
+        <div class="ctl"><label for="fStep">Bước</label><input type="number" id="fStep" min="0" max="12"></div>
+        <div class="ctl"><label for="fTotal">Tổng số bước</label><input type="number" id="fTotal" min="0" max="12"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="fCaution"> Bước cần cẩn thận (nộp, trả tiền, xóa)</label>
+      <label class="check"><input type="checkbox" id="fUnverified"> Chưa có hướng dẫn kiểm chứng</label>
+      <label class="check"><input type="checkbox" id="fDark"> Trang nền tối (thử độ nổi của vòng)</label>
+    </div>
+
+    <div class="panel" id="p-doc" hidden>
+      <h2>Kiểm tra ảnh</h2>
+      <p class="note">Chọn kết quả để xem từng trạng thái. Có thể chọn một ảnh thật từ máy để xem khung ảnh (ảnh không rời khỏi trình duyệt).</p>
+      <div class="ctl"><span class="lab">Trạng thái</span><div class="chips" id="docStates"></div></div>
+      <div class="ctl"><label for="docFile">Ảnh của bác (tuỳ chọn)</label><input type="file" id="docFile" accept="image/*"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+  /* ---------- tabs ---------- */
+  function go(tab){
+    document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-pressed', b.dataset.tab === tab));
+    ['home','guide','doc'].forEach(t => { $('v-'+t).hidden = t !== tab; $('p-'+t).hidden = t !== tab; });
+    $('sb').classList.toggle('light', tab === 'guide' && false);
+    if (tab === 'guide') renderGuide();
+    if (tab === 'doc') renderDoc();
+  }
+  document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => go(b.dataset.tab));
+  document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+
+  /* ---------- HOME ---------- */
+  const PLAYBOOKS = [
+    {goal:'Xem cần giấy tờ gì để xin bản sao Giấy khai sinh', host:'dichvucong.gov.vn', steps:3, date:'14/11/2026'},
+    {goal:'Phóng to chữ cho dễ đọc', host:'Cài đặt', steps:3, date:'14/11/2026'},
+    {goal:'Xem hàng gửi bưu điện đã đến đâu', host:'vnpost.vn', steps:3, date:'14/11/2026'},
+    {goal:'Tìm bưu cục gần nhà', host:'vnpost.vn', steps:4, date:'14/11/2026'},
+  ];
+  const FILLER = new Set(['tôi','muốn','cần','xem','gì','để','cho','của','và','với','được','làm','bác','cháu','con','em','anh','chị','ơi','nhé','ạ','à','thế','nào','sao','đi']);
+  const words = t => t.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  function matchGoal(said){
+    const heard = new Set(words(said)); if (!heard.size) return null;
+    const lower = said.trim().toLowerCase();
+    const exact = PLAYBOOKS.find(p => p.goal.toLowerCase() === lower); if (exact) return exact;
+    let best = null, bestR = -1;
+    for (const p of PLAYBOOKS){
+      const gw = [...new Set(words(p.goal).filter(w => !FILLER.has(w)))]; if (!gw.length) continue;
+      const shared = gw.filter(w => heard.has(w)).length, r = shared / gw.length;
+      if (shared >= 2 && r >= 0.4 && r > bestR){ best = p; bestR = r; }
+    }
+    return best;
+  }
+  const SAMPLES = ['Tôi muốn xin bản sao giấy khai sinh cho cháu','Chữ trên máy nhỏ quá, phóng to chữ','Tìm bưu cục gần nhà','Nộp tiền điện tháng này'];
+  $('goalSamples').innerHTML = SAMPLES.map((s,i) => `<button type="button" data-i="${i}">${esc(s)}</button>`).join('');
+  $('goalSamples').onclick = e => { const b = e.target.closest('button'); if (b){ $('goal').value = SAMPLES[b.dataset.i]; renderHome(); } };
+  $('known').innerHTML = '<div class="lab2">Việc đã có hướng dẫn từng bước:</div>' + PLAYBOOKS.map((p,i) => `<button type="button" data-i="${i}">${esc(p.goal)}</button>`).join('');
+  $('known').onclick = e => { const b = e.target.closest('button'); if (b){ $('goal').value = PLAYBOOKS[b.dataset.i].goal; renderHome(); } };
+  $('goal').oninput = renderHome;
+  $('mic').onclick = () => {
+    const m = $('mic'); if (m.classList.contains('on')) return;
+    m.classList.add('on'); const target = SAMPLES[0]; let k = 0; $('goal').value = '';
+    const words_ = target.split(' ');
+    const t = setInterval(() => { $('goal').value = words_.slice(0, ++k).join(' '); renderHome(); if (k >= words_.length){ clearInterval(t); m.classList.remove('on'); } }, 220);
+  };
+  function renderHome(){
+    const g = $('goal').value.trim();
+    $('known').hidden = !!g;
+    if (!g){ $('matchSlot').innerHTML = ''; return; }
+    const pb = matchGoal(g);
+    $('matchSlot').innerHTML = pb
+      ? `<div class="match"><span class="bar"></span><div class="t"><b>Có hướng dẫn sẵn cho việc này</b><small>${esc(pb.goal)}, ${pb.steps} bước, trên ${esc(pb.host)}.</small><small>Nhóm đã thử trên điện thoại ngày ${pb.date}.</small></div></div>`
+      : `<div class="match none"><span class="bar"></span><div class="t"><small>Chưa có hướng dẫn sẵn cho việc này. Chỉ Đây vẫn chỉ từng bước, kèm nhãn «chưa kiểm chứng».</small></div></div>`;
+  }
+  $('startBtn').onclick = () => go('guide');
+  renderHome();
+
+  /* ---------- GUIDE ---------- */
+  const PAGES = {
+    search: () => `<div class="addr">dichvucong.gov.vn</div><div class="whead">Kết quả tìm kiếm: khai sinh</div>
+      <div class="wrow" data-t="r1"><b>Đăng ký khai sinh</b><small>Cấp xã</small></div>
+      <div class="wrow" data-t="r2"><b>Cấp bản sao trích lục hộ tịch, bản sao Giấy khai sinh</b><small>Cấp xã</small></div>
+      <div class="wrow" data-t="r3"><b>Đăng ký lại khai sinh</b><small>Cấp xã</small></div>
+      <div class="wrow" data-t="r4"><b>Đăng ký khai sinh có yếu tố nước ngoài</b><small>Cấp huyện</small></div>`,
+    detail: () => `<div class="addr">dichvucong.gov.vn</div><div class="whead">Cấp bản sao Giấy khai sinh</div>
+      <div class="wsec"><h4>Thành phần hồ sơ</h4>Tờ khai theo mẫu, giấy tờ tùy thân của người yêu cầu.</div>
+      <div class="wsec"><h4>Lệ phí</h4>8.000 đồng/bản</div>
+      <div class="wsec"><h4>Thời hạn giải quyết</h4>Ngay trong ngày làm việc.</div>
+      <div class="wsec"><h4>Nơi nộp</h4>UBND cấp xã nơi đã đăng ký khai sinh.</div>
+      <div class="wbtn" data-t="submit">Nộp hồ sơ</div>`,
+  };
+  const PRESETS = [
+    {name:'Bước 2: bấm dòng', page:'search', target:'r2', title:'Bác bấm vào dòng «Cấp bản sao Giấy khai sinh».', body:'Dòng thứ hai trong danh sách, chữ màu xanh.', mark:'Cấp bản sao trích lục hộ tịch, bản sao Giấy khai sinh', step:2, total:3, caution:false, unverified:false, next:3},
+    {name:'Bước 3: cẩn thận', page:'detail', target:'submit', title:'Nếu thông tin đã đúng, bác bấm nút Nộp hồ sơ màu xanh.', body:'Nút ở cuối trang.', mark:'Nộp hồ sơ', step:3, total:3, caution:true, unverified:false, next:null},
+    {name:'Chưa kiểm chứng', page:'search', target:'r1', title:'Bác bấm vào «Đăng ký khai sinh».', body:'', mark:'Đăng ký khai sinh', step:1, total:4, caution:false, unverified:true, next:null},
+    {name:'Tôi chưa chắc', page:'search', target:null, title:'Tôi chưa chắc, bác thử kéo xuống hoặc hỏi lại.', body:'', mark:'', step:0, total:0, caution:false, unverified:false, next:null},
+  ];
+  let cur = PRESETS[0];
+  $('presets').innerHTML = PRESETS.map((p,i) => `<button type="button" data-i="${i}" aria-pressed="${i===0}">${esc(p.name)}</button>`).join('');
+  $('presets').onclick = e => { const b = e.target.closest('button'); if (b) loadPreset(+b.dataset.i); };
+  function loadPreset(i){
+    cur = PRESETS[i];
+    document.querySelectorAll('#presets button').forEach((b,k) => b.setAttribute('aria-pressed', k === i));
+    $('fTitle').value = cur.title; $('fBody').value = cur.body; $('fMark').value = cur.mark;
+    $('fStep').value = cur.step || ''; $('fTotal').value = cur.total || '';
+    $('fCaution').checked = cur.caution; $('fUnverified').checked = cur.unverified;
+    renderGuide();
+  }
+  ['fTitle','fBody','fMark','fStep','fTotal','fCaution','fUnverified','fDark'].forEach(id => $(id).addEventListener('input', renderGuide));
+
+  /* Port of HighlightView.markTitle(): node label if quoted in the title, else the first «...». */
+  function markTitle(title, mark){
+    const m = (mark || '').trim(); let s = -1, e = -1;
+    if (m.length >= 2){ s = title.toLowerCase().indexOf(m.toLowerCase()); if (s >= 0) e = s + m.length; }
+    if (s < 0){ const o = title.indexOf('«'), c = o >= 0 ? title.indexOf('»', o + 1) : -1; if (o >= 0 && c > o + 1){ s = o + 1; e = c; } }
+    if (s < 0) return esc(title);
+    return esc(title.slice(0, s)) + '<mark>' + esc(title.slice(s, e)) + '</mark>' + esc(title.slice(e));
+  }
+
+  let t0 = performance.now(), raf = 0;
+  function renderGuide(){
+    const web = $('web');
+    web.className = 'web' + ($('fDark').checked ? ' dark' : '');
+    web.innerHTML = PAGES[cur.page]();
+    const title = $('fTitle').value.trim();
+    const bodyRaw = $('fBody').value.trim();
+    const body = bodyRaw && bodyRaw !== title ? bodyRaw : '';
+    const caution = $('fCaution').checked && !!cur.target;
+    const step = parseInt($('fStep').value, 10), total = parseInt($('fTotal').value, 10);
+    const stepOk = step >= 1 && total >= 1 && step <= total;
+    const footer = [stepOk ? `Bước ${step} trên ${total}` : null, $('fUnverified').checked ? 'chưa kiểm chứng' : null].filter(Boolean).join(' · ');
+    const segs = stepOk && total >= 2 && total <= 12 ? total : 0;
+
+    const card = $('card');
+    card.className = 'card' + (caution ? ' caution' : '');
+    card.innerHTML =
+      (caution ? '<div class="band">Bác kiểm tra kỹ thông tin trước khi bấm.</div>' : '') +
+      (cur.target && footer ? `<div class="foot">${esc(footer)}</div>` : '') +
+      (cur.target && segs ? '<div class="segs">' + Array.from({length:segs}, (_, k) => `<i class="${k < step ? 'on' : ''}"></i>`).join('') + '</div>' : '') +
+      `<div class="ttl">${cur.target ? markTitle(title, $('fMark').value) : esc(title)}</div>` +
+      (body ? `<div class="bdy">${esc(body)}</div>` : '');
+    card.hidden = !title;
+    $('bubble').className = 'bubble active';
+
+    // Tap-through: the page under the overlay gets the click.
+    web.onclick = e => {
+      const el = e.target.closest('[data-t]'); if (!el) return;
+      if (el.dataset.t === cur.target){
+        toast(cur.next ? 'Bấm trúng. Màn hình đổi, app sang bước kế.' : 'Bấm trúng. Chỉ Đây không bấm hộ, bác tự bấm.');
+        if (cur.next) setTimeout(() => loadPreset(1), 700);
+      } else toast('Bấm ngoài vòng: trang vẫn nhận, vì lớp phủ không chặn tay bác.');
+    };
+    cancelAnimationFrame(raf); draw();
+  }
+  function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2200); }
+
+  function draw(){
+    const scr = $('scr'), svg = $('ovsvg'), card = $('card');
+    const W = scr.clientWidth, H = scr.clientHeight;
+    const el = cur.target ? $('web').querySelector(`[data-t="${cur.target}"]`) : null;
+    const caution = $('fCaution').checked && !!el;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let html = '';
+    if (el){
+      const sr = scr.getBoundingClientRect(), r = el.getBoundingClientRect(), pad = 8;
+      const x = r.left - sr.left - pad, y = r.top - sr.top - pad, w = r.width + pad*2, h = r.height + pad*2;
+      const rad = Math.min(Math.min(w, h)/2, 22);
+      const phase = reduce ? 0.35 : ((performance.now() - t0) % 1400) / 1400, grow = phase * 22;
+      const accent = caution ? '#ff8a8a' : '#ffd43b', edge = caution ? '#c8102e' : '#16223b';
+      html = `<path fill="rgba(13,19,34,.55)" fill-rule="evenodd" d="M0 0H${W}V${H}H0Z ${rr(x,y,w,h,rad)}"/>
+        <path fill="none" stroke="${edge}" stroke-width="10" d="${rr(x,y,w,h,rad)}"/>
+        <path fill="none" stroke="${accent}" stroke-width="5" d="${rr(x,y,w,h,rad)}"/>
+        <path fill="none" stroke="${accent}" stroke-opacity="${((1-phase)*200/255).toFixed(2)}" stroke-width="4" d="${rr(x-grow,y-grow,w+grow*2,h+grow*2,rad+grow)}"/>`;
+      // Card placement, as in drawCard(): bottom unless the target sits in the lower 45%.
+      const cy = y + h/2;
+      if (cy < H * 0.55){ card.style.top = 'auto'; card.style.bottom = '72px'; }
+      else { card.style.bottom = 'auto'; card.style.top = '56px'; }
+    } else { card.style.top = 'auto'; card.style.bottom = '72px'; }
+    svg.innerHTML = html;
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    if (el && !reduce && !$('v-guide').hidden) raf = requestAnimationFrame(draw);
+  }
+  function rr(x,y,w,h,r){ return `M${x+r} ${y}H${x+w-r}A${r} ${r} 0 0 1 ${x+w} ${y+r}V${y+h-r}A${r} ${r} 0 0 1 ${x+w-r} ${y+h}H${x+r}A${r} ${r} 0 0 1 ${x} ${y+h-r}V${y+r}A${r} ${r} 0 0 1 ${x+r} ${y}Z`; }
+  loadPreset(0);
+
+  /* ---------- DOC ---------- */
+  const KINDS = ['Căn cước','Ảnh chân dung','Giấy tờ khác'];
+  const STATES = {
+    empty:{label:'Chưa chụp'}, working:{label:'Đang xem'},
+    bad:{label:'Ảnh mờ, bị cắt', ok:false, doc:'Căn cước công dân', problems:['Ảnh mờ, chưa đọc được số trên thẻ.','Góc dưới bên phải bị cắt mất.'], advice:'Bác đặt thẻ lên bàn chỗ sáng, giữ máy yên rồi chụp lại.', ms:2840},
+    ok:{label:'Ảnh dùng được', ok:true, doc:'Căn cước công dân', problems:[], advice:'Ảnh rõ, đủ bốn góc, không lóa. Bác dùng ảnh này được.', ms:2310},
+    failed:{label:'Lỗi mạng', reason:'HTTP 401: khóa AI không đúng hoặc đã hết hạn.'},
+  };
+  let docState = 'bad', kind = 0, userPhoto = null;
+  $('docStates').innerHTML = Object.entries(STATES).map(([k,v]) => `<button type="button" data-k="${k}" aria-pressed="${k===docState}">${esc(v.label)}</button>`).join('');
+  $('docStates').onclick = e => { const b = e.target.closest('button'); if (!b) return; docState = b.dataset.k; document.querySelectorAll('#docStates button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderDoc(); };
+  $('docFile').onchange = e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => { userPhoto = rd.result; renderDoc(); }; rd.readAsDataURL(f); };
+
+  function renderDoc(){
+    const s = STATES[docState], hasPhoto = docState !== 'empty';
+    const verdictCls = docState === 'ok' ? ' ok' : docState === 'bad' ? ' bad' : '';
+    let photo = '';
+    if (hasPhoto) photo = userPhoto
+      ? `<img class="photo${verdictCls}" src="${userPhoto}" alt="Ảnh giấy tờ bác vừa chọn">`
+      : `<div class="sample${verdictCls}${docState==='bad'?' blur':''}" role="img" aria-label="Ảnh giấy tờ mẫu"><span>CĂN CƯỚC CÔNG DÂN · ảnh mẫu</span></div>`;
+    let result = '';
+    if (docState === 'working') result = '<div class="working"><span class="spin"></span>Đang xem ảnh…</div>';
+    if (docState === 'ok' || docState === 'bad'){
+      const tint = s.ok ? 'var(--ok)' : 'var(--stamp)';
+      result = `<div class="vcard"><span class="bar" style="background:${tint}"></span><div class="t">
+        <h5 style="color:${tint}">${s.ok ? 'Ảnh dùng được' : 'Ảnh cần chụp lại'}</h5>
+        <small>Loại giấy tờ: ${esc(s.doc)}</small>
+        ${s.problems.map(p => `<p>• ${esc(p)}</p>`).join('')}
+        <p style="font-weight:600">${esc(s.advice)}</p>
+        <small>Trả lời sau ${s.ms} ms</small></div></div>`;
+    }
+    if (docState === 'failed') result = `<div class="vcard"><span class="bar" style="background:var(--stamp)"></span><div class="t"><h5 style="color:var(--stamp);font-size:19px">Chưa kết nối được</h5><p>${esc(s.reason)}</p></div></div>`;
+    const retake = docState === 'bad';
+    $('doc').innerHTML = `
+      <button type="button" class="back" data-go="home">‹ Quay lại</button>
+      <h3>Kiểm tra ảnh giấy tờ</h3>
+      ${hasPhoto ? '' : '<p class="intro">Chụp hoặc chọn ảnh giấy tờ. Chỉ Đây xem ảnh có rõ, đủ bốn góc, không lóa không, để hồ sơ của bác không bị trả lại.</p>'}
+      <div class="lab3">Loại giấy tờ</div>
+      <div class="kinds">${KINDS.map((k,i) => `<button type="button" data-kind="${i}" aria-pressed="${i===kind}">${esc(k)}</button>`).join('')}</div>
+      ${photo}${result}
+      <button type="button" class="start" style="margin-top:4px${docState==='working'?';background:var(--line);color:var(--soft)':''}">${retake ? 'Chụp lại' : 'Chụp ảnh'}</button>
+      <p class="hint">Đặt giấy tờ lên bàn chỗ sáng, giữ máy yên, chụp đủ bốn góc.</p>
+      <button type="button" class="sec">Chọn ảnh có sẵn</button>`;
+    $('doc').querySelector('[data-go]').onclick = () => go('home');
+    $('doc').querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { kind = +b.dataset.kind; renderDoc(); });
+  }
+})();
+</script>
