@@ -72,11 +72,27 @@ class HighlightWindow(private val service: AccessibilityService) {
         view.target = null
     }
 
-    /** Ring [target] (absolute screen pixels, from getBoundsInScreen) and show the card. */
-    fun showTarget(target: Rect, title: String, body: String?, footer: String?, caution: Boolean) {
+    /**
+     * Ring [target] (absolute screen pixels, from getBoundsInScreen) and show the card.
+     * [footer] is the small line above the title ("Bước 2 trên 3 · chưa kiểm chứng"); [step] and
+     * [total] draw the progress segments under it. [mark] is the target's on-screen label: where
+     * it appears in the title it gets a highlighter background, so the eye finds the button name.
+     * [cautionNote] is shown in a stamp-red band at the top of the card when [caution] is set.
+     */
+    fun showTarget(
+        target: Rect,
+        title: String,
+        body: String?,
+        footer: String?,
+        caution: Boolean,
+        step: Int? = null,
+        total: Int? = null,
+        mark: String? = null,
+        cautionNote: String? = null,
+    ) {
         view.target = Rect(target)
         view.caution = caution
-        view.setCard(title, body, footer)
+        view.setCard(title, body, footer, step, total, mark, cautionNote.takeIf { caution })
         reveal()
     }
 
@@ -84,7 +100,7 @@ class HighlightWindow(private val service: AccessibilityService) {
     fun showMessage(title: String, body: String? = null) {
         view.target = null
         view.caution = false
-        view.setCard(title, body, null)
+        view.setCard(title, body, null, null, null, null, null)
         reveal()
     }
 
@@ -116,9 +132,14 @@ class HighlightWindow(private val service: AccessibilityService) {
         private var title: String = ""
         private var body: String? = null
         private var footer: String? = null
+        private var step: Int? = null
+        private var total: Int? = null
+        private var mark: String? = null
+        private var cautionNote: String? = null
         private var titleLayout: StaticLayout? = null
         private var bodyLayout: StaticLayout? = null
         private var footerLayout: StaticLayout? = null
+        private var cautionLayout: StaticLayout? = null
         private var layoutWidth = 0
 
         private val dim = Paint().apply { color = 0x8C0D1322.toInt() }
@@ -138,15 +159,33 @@ class HighlightWindow(private val service: AccessibilityService) {
             color = INK_SOFT; textSize = 15f * sp; typeface = Typeface.DEFAULT_BOLD
         }
 
+        private val cautionPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = STAMP; textSize = 16f * sp; typeface = Typeface.DEFAULT_BOLD
+        }
+        private val bandFill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = STAMP_BG }
+        private val segPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
         private val origin = IntArray(2)
         private val hole = RectF()
         private val path = Path()
         private val cardRect = RectF()
 
-        fun setCard(title: String, body: String?, footer: String?) {
+        fun setCard(
+            title: String,
+            body: String?,
+            footer: String?,
+            step: Int?,
+            total: Int?,
+            mark: String?,
+            cautionNote: String?,
+        ) {
             this.title = title
             this.body = body?.takeIf { it.isNotBlank() && it != title }
             this.footer = footer?.takeIf { it.isNotBlank() }
+            this.step = step
+            this.total = total?.takeIf { step != null && it in 2..MAX_SEGMENTS && step in 1..it }
+            this.mark = mark?.trim()?.takeIf { it.length >= 2 }
+            this.cautionNote = cautionNote?.takeIf { it.isNotBlank() }
             layoutWidth = 0 // rebuild text layouts on next draw
             invalidate()
         }
@@ -154,16 +193,40 @@ class HighlightWindow(private val service: AccessibilityService) {
         private fun buildLayouts(width: Int) {
             if (width == layoutWidth || width <= 0) return
             layoutWidth = width
-            fun make(text: String, paint: TextPaint, maxLines: Int) =
-                StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
+            fun make(text: CharSequence, paint: TextPaint, maxLines: Int, w: Int = width) =
+                StaticLayout.Builder.obtain(text, 0, text.length, paint, w)
                     .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                     .setLineSpacing(0f, 1.12f)
                     .setMaxLines(maxLines)
                     .setEllipsize(android.text.TextUtils.TruncateAt.END)
                     .build()
-            titleLayout = make(title, titlePaint, 3)
+            titleLayout = make(markTitle(), titlePaint, 3)
             bodyLayout = body?.let { make(it, bodyPaint, 5) }
             footerLayout = footer?.let { make(it, footerPaint, 1) }
+            cautionLayout = cautionNote?.let { make(it, cautionPaint, 3, width - (2 * BAND_PAD_DP * d).toInt()) }
+        }
+
+        /**
+         * The title with a highlighter background behind the button name: the target's label if
+         * the title quotes it, otherwise the first «...» quote. Plain text when neither is found.
+         */
+        private fun markTitle(): CharSequence {
+            val m = mark
+            var start = -1
+            var end = -1
+            if (m != null) {
+                start = title.indexOf(m, ignoreCase = true)
+                if (start >= 0) end = start + m.length
+            }
+            if (start < 0) {
+                val open = title.indexOf('«')
+                val close = if (open >= 0) title.indexOf('»', open + 1) else -1
+                if (open >= 0 && close > open + 1) { start = open + 1; end = close }
+            }
+            if (start < 0) return title
+            return android.text.SpannableString(title).apply {
+                setSpan(android.text.style.BackgroundColorSpan(HIGHLIGHT), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
         }
 
         override fun onDraw(canvas: Canvas) {
@@ -254,8 +317,13 @@ class HighlightWindow(private val service: AccessibilityService) {
             buildLayouts((width - 2 * margin - 2 * padH).toInt())
             val tl = titleLayout ?: return
             val gap = 6f * d
+            val bandPad = BAND_PAD_DP * d
+            val segH = 6f * d
+            val segs = total
             var contentH = tl.height.toFloat()
+            cautionLayout?.let { contentH += it.height + 2 * bandPad + gap * 2 }
             footerLayout?.let { contentH += it.height + gap }
+            if (segs != null) contentH += segH + gap * 2
             bodyLayout?.let { contentH += it.height + gap }
             val cardH = contentH + 2 * padV
 
@@ -273,9 +341,32 @@ class HighlightWindow(private val service: AccessibilityService) {
 
             canvas.save()
             canvas.translate(cardRect.left + padH, cardRect.top + padV)
+            val innerW = cardRect.width() - 2 * padH
+            cautionLayout?.let {
+                // Stamp-red band: this step sends, pays or deletes. Chỉ Đây still never taps.
+                val bandH = it.height + 2 * bandPad
+                canvas.drawRoundRect(0f, 0f, innerW, bandH, 12f * d, 12f * d, bandFill)
+                canvas.save()
+                canvas.translate(bandPad, bandPad)
+                it.draw(canvas)
+                canvas.restore()
+                canvas.translate(0f, bandH + gap * 2)
+            }
             footerLayout?.let {
                 it.draw(canvas)
                 canvas.translate(0f, it.height + gap)
+            }
+            if (segs != null) {
+                // Progress: one segment per step, done and current filled.
+                val cur = step ?: 0
+                val sGap = 5f * d
+                val segW = (innerW - sGap * (segs - 1)) / segs
+                for (k in 0 until segs) {
+                    segPaint.color = if (k < cur) (if (caution) STAMP else INK) else LINE
+                    val x = k * (segW + sGap)
+                    canvas.drawRoundRect(x, 0f, x + segW, segH, segH / 2, segH / 2, segPaint)
+                }
+                canvas.translate(0f, segH + gap * 2)
             }
             tl.draw(canvas)
             canvas.translate(0f, tl.height + gap)
@@ -287,6 +378,10 @@ class HighlightWindow(private val service: AccessibilityService) {
             const val HIGHLIGHT = 0xFFFFD43B.toInt()
             const val CAUTION = 0xFFFF8A8A.toInt()
             const val STAMP = 0xFFC8102E.toInt()
+            const val STAMP_BG = 0xFFFDECEE.toInt()
+            const val LINE = 0xFFDDE2EA.toInt()
+            const val MAX_SEGMENTS = 12
+            const val BAND_PAD_DP = 10f
             const val INK = 0xFF16223B.toInt()
             const val INK_SOFT = 0xFF5D6880.toInt()
             const val PULSE_MS = 1400L

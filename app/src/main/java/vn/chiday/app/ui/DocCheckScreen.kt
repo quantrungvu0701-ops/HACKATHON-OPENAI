@@ -5,6 +5,22 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -116,39 +132,79 @@ fun DocCheckScreen(onBack: () -> Unit) {
         if (saved && uri != null) run(uri)
     }
 
+    val working = state == DocState.Working
+    val verdict = (state as? DocState.Done)?.verdict
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(Paper)
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp)
             .semantics { testTagsAsResourceId = true },
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        TextButton(onClick = onBack) { Text(stringResource(R.string.settings_back)) }
-        Text(stringResource(R.string.doc_title), style = MaterialTheme.typography.titleLarge)
-        Text(
-            stringResource(R.string.doc_intro),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        TextButton(onClick = onBack, contentPadding = ButtonDefaults.TextButtonContentPadding) {
+            Text(stringResource(R.string.settings_back), color = Ink2, style = MaterialTheme.typography.titleMedium)
+        }
+        Text(stringResource(R.string.doc_title), style = MaterialTheme.typography.headlineLarge, color = Ink)
+        if (photo == null) {
+            Text(stringResource(R.string.doc_intro), style = MaterialTheme.typography.bodyLarge, color = InkSoft)
+        }
 
+        Text(stringResource(R.string.doc_kind_label), style = MaterialTheme.typography.bodyMedium, color = InkSoft, fontWeight = FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             kinds.forEachIndexed { i, label ->
-                val mod = Modifier.weight(1f).heightIn(min = 56.dp).testTag("doc_kind_$i")
-                if (i == kind) {
-                    Button(onClick = {}, modifier = mod, shape = RoundedCornerShape(14.dp), contentPadding = ButtonDefaults.TextButtonContentPadding) {
-                        Text(label, style = MaterialTheme.typography.bodyMedium)
-                    }
-                } else {
-                    OutlinedButton(onClick = { kind = i }, modifier = mod, shape = RoundedCornerShape(14.dp), contentPadding = ButtonDefaults.TextButtonContentPadding) {
-                        Text(label, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
+                val selected = i == kind
+                OutlinedButton(
+                    onClick = { kind = i },
+                    enabled = !working,
+                    modifier = Modifier.weight(1f).heightIn(min = 56.dp).testTag("doc_kind_$i"),
+                    shape = RoundedCornerShape(14.dp),
+                    contentPadding = ButtonDefaults.TextButtonContentPadding,
+                    border = BorderStroke(2.dp, if (selected) Ink else Line),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (selected) Ink else Card,
+                        contentColor = if (selected) Color.White else Ink,
+                    ),
+                ) { Text(label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center) }
             }
         }
 
+        photo?.let { p ->
+            Image(
+                bitmap = p.preview.asImageBitmap(),
+                contentDescription = stringResource(R.string.doc_photo_description),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 260.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(2.dp, if (verdict == null) Line else if (verdict.ok) Ok else Stamp, RoundedCornerShape(16.dp)),
+            )
+        }
+
+        when (val s = state) {
+            DocState.Working -> Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.testTag("doc_working"),
+            ) {
+                CircularProgressIndicator(color = Ink, strokeWidth = 3.dp, modifier = Modifier.size(24.dp))
+                Text(stringResource(R.string.doc_working), style = MaterialTheme.typography.titleMedium, color = Ink)
+            }
+            is DocState.Done -> VerdictCard(s.verdict, s.millis)
+            is DocState.Failed -> AccentCard(accent = Stamp, tag = "doc_failed") {
+                Text(stringResource(R.string.settings_test_failed), style = MaterialTheme.typography.titleMedium, color = Stamp)
+                Text(s.reason, style = MaterialTheme.typography.bodyLarge, color = Ink)
+            }
+            DocState.Empty -> {}
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        // Same place and look as «Bắt đầu» on Home, so the main action is always where the eye expects it.
         Button(
             onClick = {
                 // The camera app writes the full-size photo to our cache through a FileProvider
@@ -158,64 +214,76 @@ fun DocCheckScreen(onBack: () -> Unit) {
                 cameraUri = uri
                 runCatching { takePicture.launch(uri) }.onFailure { state = DocState.Failed(it.message ?: "camera") }
             },
-            enabled = state != DocState.Working,
+            enabled = !working,
             modifier = Modifier.fillMaxWidth().heightIn(min = 68.dp).testTag("btn_camera"),
-            shape = RoundedCornerShape(18.dp),
-        ) { Text(stringResource(R.string.doc_take)) }
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Ink,
+                contentColor = Color.White,
+                disabledContainerColor = Line,
+                disabledContentColor = InkSoft,
+            ),
+        ) {
+            Text(
+                stringResource(if (verdict != null && !verdict.ok) R.string.doc_retake else R.string.doc_take),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
+        }
+        Text(
+            stringResource(R.string.doc_take_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = InkSoft,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         OutlinedButton(
             onClick = { pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-            enabled = state != DocState.Working,
+            enabled = !working,
             modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).testTag("btn_gallery"),
-            shape = RoundedCornerShape(18.dp),
-        ) { Text(stringResource(R.string.doc_pick)) }
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(2.dp, Line),
+        ) { Text(stringResource(R.string.doc_pick), color = Ink) }
+    }
+}
 
-        when (val s = state) {
-            DocState.Working -> Text(stringResource(R.string.doc_working), style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("doc_working"))
-            is DocState.Done -> VerdictCard(s.verdict, s.millis)
-            is DocState.Failed -> Column(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.10f)).padding(16.dp).testTag("doc_failed"),
-            ) {
-                Text(stringResource(R.string.settings_test_failed), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.error)
-                Text(s.reason, style = MaterialTheme.typography.bodyLarge)
-            }
-            DocState.Empty -> {}
-        }
-
-        photo?.let { p ->
-            Image(
-                bitmap = p.preview.asImageBitmap(),
-                contentDescription = stringResource(R.string.doc_photo_description),
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp).clip(RoundedCornerShape(16.dp)),
-            )
-        }
+/** White card with a coloured bar on the left, the same shape as the goal match card on Home. */
+@Composable
+private fun AccentCard(accent: Color, tag: String, content: @Composable ColumnScope.() -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Card)
+            .testTag(tag),
+    ) {
+        Box(Modifier.width(6.dp).fillMaxHeight().background(accent))
+        Column(
+            Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            content = content,
+        )
     }
 }
 
 @Composable
 private fun VerdictCard(v: DocVerdict, millis: Long) {
-    val tint = if (v.ok) Ok else MaterialTheme.colorScheme.error
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(tint.copy(alpha = 0.12f))
-            .padding(16.dp)
-            .testTag(if (v.ok) "doc_ok" else "doc_bad"),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+    val tint = if (v.ok) Ok else Stamp
+    AccentCard(accent = tint, tag = if (v.ok) "doc_ok" else "doc_bad") {
         Text(
             stringResource(if (v.ok) R.string.doc_ok_title else R.string.doc_bad_title),
             style = MaterialTheme.typography.titleLarge,
             color = tint,
         )
         v.document?.takeIf { it.isNotBlank() }?.let {
-            Text(stringResource(R.string.doc_detected, it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.doc_detected, it), style = MaterialTheme.typography.bodyMedium, color = InkSoft)
         }
-        v.problems.filter { it.isNotBlank() }.forEach { Text("• $it", style = MaterialTheme.typography.bodyLarge) }
-        v.advice?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
-        Text(stringResource(R.string.doc_time, millis), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        v.problems.filter { it.isNotBlank() }.forEach { Text("• $it", style = MaterialTheme.typography.bodyLarge, color = Ink) }
+        v.advice?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = MaterialTheme.typography.bodyLarge, color = Ink, fontWeight = FontWeight.SemiBold)
+        }
+        Text(stringResource(R.string.doc_time, millis), style = MaterialTheme.typography.bodyMedium, color = InkSoft)
     }
 }

@@ -144,13 +144,21 @@ class GuideService : AccessibilityService() {
         val stepLabel = if (step != null && total != null && step in 1..total) getString(R.string.guide_step, step, total) else null
         val footer = listOfNotNull(stepLabel, getString(R.string.guide_unverified).takeIf { !result.verified })
             .joinToString(" · ").takeIf { it.isNotEmpty() }
-        val body = listOfNotNull(
-            say.takeIf { it.isNotEmpty() && it != title },
-            getString(R.string.guide_caution).takeIf { reply.caution },
-        ).joinToString("\n").takeIf { it.isNotEmpty() }
+        val body = say.takeIf { it.isNotEmpty() && it != title }
 
-        shown = snap.nodes[result.targetIndex]
-        highlight?.showTarget(result.rect, title, body, footer, reply.caution)
+        val node = snap.nodes[result.targetIndex]
+        shown = node
+        highlight?.showTarget(
+            target = result.rect,
+            title = title,
+            body = body,
+            footer = footer,
+            caution = reply.caution,
+            step = step,
+            total = total,
+            mark = node.text ?: node.desc,
+            cautionNote = getString(R.string.guide_caution),
+        )
         bubble?.state = BubbleWindow.State.ACTIVE
 
         // Spoken text: the full sentence, plus the warning before payment / submit / delete.

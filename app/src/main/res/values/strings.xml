@@ -69,7 +69,7 @@
     <string name="guide_no_key_body">Bác mở ứng dụng Chỉ Đây và nhập khóa trong Cài đặt.</string>
     <string name="guide_failed">Chưa kết nối được với AI</string>
     <string name="guide_failed_body">Bác kiểm tra mạng rồi bấm nút tròn lần nữa.</string>
-    <string name="guide_step">Bước %1$d/%2$d</string>
+    <string name="guide_step">Bước %1$d trên %2$d</string>
     <string name="guide_unverified">chưa kiểm chứng</string>
     <string name="guide_caution">Bác kiểm tra kỹ thông tin trước khi bấm.</string>
 
@@ -88,6 +88,9 @@
     <string name="doc_detected">Loại giấy tờ: %1$s</string>
     <string name="doc_time">Trả lời sau %1$d ms</string>
     <string name="doc_photo_description">Ảnh giấy tờ bác vừa chọn</string>
+    <string name="doc_kind_label">Loại giấy tờ</string>
+    <string name="doc_retake">Chụp lại</string>
+    <string name="doc_take_hint">Đặt giấy tờ lên bàn chỗ sáng, giữ máy yên, chụp đủ bốn góc.</string>
 
     <!-- Paste instructions -> playbook -->
     <string name="home_open_import">Tạo hướng dẫn mới từ văn bản</string>
