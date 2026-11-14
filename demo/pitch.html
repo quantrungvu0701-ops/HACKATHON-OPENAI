@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chỉ Đây pitch</title>
+<style>
+:root{--ink:#1B2238;--hl:#F5D04A;--soft:#5B6478;--bg:#FFFFFF}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--ink);font-family:"Be Vietnam Pro","Segoe UI",Roboto,Arial,sans-serif}
+.s{position:absolute;inset:0;display:none;background:var(--bg);color:var(--ink);padding:6vh 7vw;flex-direction:column;justify-content:center}
+.s.on{display:flex}
+h1{font-size:8.5vw;font-weight:900;line-height:1.02;letter-spacing:-.02em}
+h2{font-size:5.2vw;font-weight:900;line-height:1.05;margin-bottom:4vh}
+ul{list-style:none;padding:0}
+li{font-size:2.9vw;line-height:1.3;margin:1.6vh 0;padding-left:3.4vw;position:relative}
+li:before{content:"";position:absolute;left:0;top:.45em;width:1.5vw;height:1.5vw;border-radius:50%;background:var(--hl);box-shadow:0 0 0 .35vw var(--ink)}
+mark{background:var(--hl);color:var(--ink);padding:0 .15em;border-radius:.15em}
+.big{font-size:13vw;font-weight:900;line-height:1}
+.sub{font-size:2.6vw;color:var(--soft);margin-top:2vh}
+.dark{background:var(--ink);color:#fff}
+.dark .sub{color:#C9CFDC}
+.ring{width:14vw;height:14vw;border-radius:50%;background:var(--ink);box-shadow:0 0 0 1.4vw var(--hl) inset,0 0 0 .5vw #fff;display:flex;align-items:center;justify-content:center;margin-bottom:4vh}
+.ring:after{content:"";width:3.4vw;height:3.4vw;border-radius:50%;background:var(--hl)}
+.row{display:flex;gap:3vw;margin-top:5vh}
+.chip{font-size:2.6vw;font-weight:800;border:.4vw solid var(--hl);border-radius:99px;padding:1.2vh 2.4vw}
+.n{position:fixed;right:2vw;bottom:2vh;font-size:1.4vw;color:var(--soft);z-index:9}
+</style></head><body>
+
+<section class="s on">
+  <div class="big">Bấm vào đâu?</div>
+  <ul style="margin-top:5vh">
+    <li><mark>14,2 triệu</mark> người Việt từ 60 tuổi phải làm thủ tục trên mạng <span style="color:var(--soft)">(TCTK 2024)</span></li>
+    <li>Ai cũng có lúc lạc: cắt video <b>CapCut</b>, tra bưu gửi, nộp hồ sơ</li>
+    <li>Nút ẩn, chữ nhỏ, bấm nhầm là <b>mất tiền, mất hồ sơ</b></li>
+  </ul>
+</section>
+
+<section class="s">
+  <div class="ring"></div>
+  <h2>Chỉ Đây: bấm một nút, <mark>AI chỉ đúng chỗ</mark></h2>
+  <ul>
+    <li>AI khoanh đúng nút cần bấm, đọc to tiếng Việt</li>
+    <li>Tự sang bước sau; cảnh báo trước khi nộp, xóa, trả tiền</li>
+    <li>Chạy trên mọi app. Chỉ hướng dẫn, <b>không bấm hộ</b></li>
+  </ul>
+</section>
+
+<section class="s dark">
+  <div class="big">Demo trực tiếp</div>
+  <div class="sub">Điện thoại thật · AI thật · đóng hẳn rồi mở lại</div>
+  <div class="row"><span class="chip">Dịch vụ công</span><span class="chip">CapCut</span><span class="chip">VNPost</span></div>
+</section>
+
+<section class="s">
+  <h2>Người dùng đầu tiên → <mark>toàn cầu</mark></h2>
+  <ul>
+    <li><b>Đầu tiên:</b> gia đình, CLB người cao tuổi, lớp bình dân học vụ số, người mới dùng app</li>
+    <li>Thêm dịch vụ mới bằng <b>một playbook ngắn</b></li>
+    <li>Ra thế giới: chỉ đổi ngôn ngữ</li>
+    <li>Ngân hàng, nhà mạng trả phí; <b>người dùng miễn phí</b></li>
+  </ul>
+  <div class="sub" style="margin-top:5vh">Không ai bị bỏ lại khi mọi thứ lên mạng.</div>
+</section>
+
+<div class="n" id="n"></div>
+<script>
+const s=[...document.querySelectorAll('.s')];let i=0;
+function go(k){s[i].classList.remove('on');i=Math.max(0,Math.min(s.length-1,k));s[i].classList.add('on');document.getElementById('n').textContent=(i+1)+'/'+s.length}
+document.addEventListener('keydown',e=>{if(['ArrowRight',' ','PageDown','Enter'].includes(e.key))go(i+1);if(['ArrowLeft','PageUp','Backspace'].includes(e.key))go(i-1);if(e.key==='f')document.documentElement.requestFullscreen()});
+document.addEventListener('click',e=>go(e.clientX>innerWidth/3?i+1:i-1));go(0);
+</script>
+</body></html>
